@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { MessageSquareText } from "lucide-react";
 import {
-  deletePost,
-  getFeedPosts,
+  getLikedPostsForUser,
+  searchPosts,
   toggleLikePost,
   getPostMetaBatch,
+  deletePost,
 } from "./Controller";
 
 const getPostPreview = (post, maxLength = 180) => {
@@ -19,10 +20,10 @@ const getPostPreview = (post, maxLength = 180) => {
 const PostListEntry = ({
   post,
   user,
-  onDelete,
   liked,
   likeCount,
   commentCount,
+  onDelete,
   onTogglePostLike,
 }) => {
   const navigate = useNavigate();
@@ -66,7 +67,7 @@ const PostListEntry = ({
 
       {(post.post_topics || []).length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">
-          {(post.post_topics || []).map((topic) => (
+          {post.post_topics.map((topic) => (
             <span key={topic} className="tag-ghost">
               {topic}
             </span>
@@ -130,14 +131,17 @@ const PostListEntry = ({
   );
 };
 
-export default function FeedPage({ user }) {
+export default function RecommendedPostsPage({ user }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [posts, setPosts] = useState([]);
-  const [totalResults, setTotalResults] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const [recommendedPosts, setRecommendedPosts] = useState([]);
   const [metaById, setMetaById] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [totalResults, setTotalResults] = useState(0);
+
+  const userKey = useMemo(() => user?.id || user?.sub, [user]);
 
   const filter = {
     page: parseInt(searchParams.get("page") || "1", 10),
@@ -162,32 +166,92 @@ export default function FeedPage({ user }) {
   };
 
   useEffect(() => {
-    const loadFeed = async () => {
+    const loadRecommendations = async () => {
+      if (!userKey) {
+        setMessage("Please log in to see recommended posts.");
+        setRecommendedPosts([]);
+        setTotalResults(0);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
+      setMessage("");
 
       try {
-        const resp = await getFeedPosts(filter);
-        const result = resp?.result || resp || {};
+        const likedResp = await getLikedPostsForUser(userKey);
+        const likedPosts = likedResp?.result || likedResp || [];
 
-        setPosts(result.posts || []);
-        setTotalResults(result.total_results || 0);
-      } catch (err) {
-        console.error("Failed to load feed", err);
-        setPosts([]);
+        if (!likedPosts.length) {
+          setRecommendedPosts([]);
+          setTotalResults(0);
+          setMessage("There aren't any compatible posts.");
+          return;
+        }
+
+        const likedTopicSet = new Set(
+          likedPosts.flatMap((post) => post.post_topics || [])
+        );
+
+        if (!likedTopicSet.size) {
+          setRecommendedPosts([]);
+          setTotalResults(0);
+          setMessage("There aren't any compatible posts.");
+          return;
+        }
+
+        const allPostsResp = await searchPosts({
+          filter: {
+            sortBy: "date_newest",
+            page: 1,
+            query: "",
+            topics: [],
+            results_per_page: 200,
+          },
+        });
+
+        const allPosts = allPostsResp?.result?.posts || [];
+        const likedPostIds = new Set(likedPosts.map((post) => String(post.id)));
+
+        const matches = allPosts.filter((post) => {
+          const postTopics = post.post_topics || [];
+          const hasSharedTopic = postTopics.some((topic) =>
+            likedTopicSet.has(topic)
+          );
+
+          return hasSharedTopic && !likedPostIds.has(String(post.id));
+        });
+
+        if (!matches.length) {
+          setRecommendedPosts([]);
+          setTotalResults(0);
+          setMessage("There aren't any compatible posts.");
+          return;
+        }
+
+        setTotalResults(matches.length);
+
+        const start = (filter.page - 1) * filter.results_per_page;
+        const end = start + filter.results_per_page;
+        setRecommendedPosts(matches.slice(start, end));
+      } catch (error) {
+        console.error("Failed to load recommended posts", error);
+        setRecommendedPosts([]);
         setTotalResults(0);
+        setMessage("Failed to load recommendations.");
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadFeed();
-  }, [searchParams]);
+    loadRecommendations();
+  }, [userKey, searchParams]);
 
   useEffect(() => {
     const syncMetadata = async () => {
-      if (!posts.length) return;
+      if (!recommendedPosts.length) return;
 
-      const idsToFetch = posts
+      const idsToFetch = recommendedPosts
         .map((p) => p.id)
         .filter((id) => !metaById[id]);
 
@@ -214,10 +278,10 @@ export default function FeedPage({ user }) {
     };
 
     syncMetadata();
-  }, [posts, user]);
+  }, [recommendedPosts, user]);
 
   const handleDeleteLocally = (deletedId) => {
-    setPosts((prev) => prev.filter((p) => p.id !== deletedId));
+    setRecommendedPosts((prev) => prev.filter((p) => p.id !== deletedId));
     setTotalResults((prev) => Math.max(0, prev - 1));
   };
 
@@ -249,36 +313,36 @@ export default function FeedPage({ user }) {
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-semibold">Your Feed</h1>
+        <h1 className="text-3xl font-semibold">Recommended Posts</h1>
         <p className="text-sm opacity-70 mt-2">
-          Posts from people you follow
+          Posts that match topics from posts you liked before
         </p>
       </div>
 
       <div className="space-y-4">
         {isLoading ? (
           <div className="width-full center my-40 text-center text-gray-500">
-            Loading feed...
+            Loading recommendations...
           </div>
-        ) : posts.length > 0 ? (
-          posts.map((post) => {
+        ) : recommendedPosts.length > 0 ? (
+          recommendedPosts.map((post) => {
             const meta = metaById[post.id] || {};
             return (
               <PostListEntry
                 key={post.id}
                 post={post}
                 user={user}
-                onDelete={handleDeleteLocally}
                 liked={meta.liked}
                 likeCount={meta.likeCount}
                 commentCount={meta.commentCount}
+                onDelete={handleDeleteLocally}
                 onTogglePostLike={onTogglePostLike}
               />
             );
           })
         ) : (
           <div className="width-full center my-40 text-center text-gray-500">
-            Your feed is empty. Follow people to see their posts.
+            {message || "There aren't any compatible posts."}
           </div>
         )}
       </div>
@@ -322,12 +386,12 @@ export default function FeedPage({ user }) {
           <button
             type="button"
             className="btn-primary"
-            onClick={() => navigate("/posts/recommended")}
+            onClick={() => navigate("/posts/feed")}
             disabled={!user}
           >
-            Recommended
+            Feed
           </button>
-          
+
           <button
             type="button"
             className="btn-primary"

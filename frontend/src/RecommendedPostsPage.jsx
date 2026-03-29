@@ -186,7 +186,7 @@ export default function RecommendedPostsPage({ user }) {
         if (!likedPosts.length) {
           setRecommendedPosts([]);
           setTotalResults(0);
-          setMessage("1There aren't any compatible posts.");
+          setMessage("There aren't any compatible posts.");
           return;
         }
 
@@ -197,7 +197,7 @@ export default function RecommendedPostsPage({ user }) {
         if (!likedTopicSet.size) {
           setRecommendedPosts([]);
           setTotalResults(0);
-          setMessage("2There aren't any compatible posts.");
+          setMessage("There aren't any compatible posts.");
           return;
         }
 
@@ -229,7 +229,7 @@ export default function RecommendedPostsPage({ user }) {
         if (!matches.length) {
           setRecommendedPosts([]);
           setTotalResults(0);
-          setMessage("3There aren't any compatible posts.");
+          setMessage("There aren't any compatible posts.");
           return;
         }
 
@@ -346,7 +346,7 @@ export default function RecommendedPostsPage({ user }) {
           })
         ) : (
           <div className="width-full center my-40 text-center text-gray-500">
-            {message || "4There aren't any compatible posts."}
+            {message || "There aren't any compatible posts."}
           </div>
         )}
       </div>

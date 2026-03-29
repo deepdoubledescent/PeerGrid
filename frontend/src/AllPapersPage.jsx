@@ -240,7 +240,10 @@ export default function AllPapersPage({ user }) {
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      <h1 className="text-3xl font-semibold mb-6">All Papers</h1>
+      <h1 className="text-3xl font-semibold mb-6">Search Papers</h1>
+      <p className="text-stone-500 mt-2">
+        Browse papers and filter them by year and institution.
+      </p>
 
       {/* Search Bar */}
       <div className="search-bar flex flex-row">

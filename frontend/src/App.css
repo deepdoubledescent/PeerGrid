@@ -1,0 +1,224 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;500&display=swap');
+
+:root {
+  --bg: #ffffff;
+  --text-primary: #2c2c2c;
+  --text-secondary: #505e76;
+  /* Catalyst Color */
+  --accent: #003d82;
+  --border: #e5e5e5;
+  --yellow: #E1BC29;
+  --light-yellow: #FBEBC5;
+  --green: #70A37F;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.project-short-description {
+  color: var(--text-primary);
+  font-weight: 100;
+  /*border-left-width: 7px;
+  border-left-color: var(--accent);   
+  border-left-style: solid;*/
+}
+
+.icon-small {
+  display: inline-flex;
+  /* Keeps the container inline, but contents flex */
+  align-items: center;
+  /* Vertically centers the icon with the text */
+  white-space: nowrap;
+  /* Forces the text and icon to stay on one line */
+  gap: 4px;
+  /* Optional: Adds a tiny space between icon and text */
+}
+
+.content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.page-minimal {
+  text-align: center;
+  max-width: 600px;
+  margin: 50px auto;
+}
+
+.page-standard {
+  text-align: left;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2rem 3rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-logo {
+  width: 35px;
+  height: 35px;
+}
+
+.profile-badge {
+  color: var(--text-primary);
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  border-color: var(--text-primary);
+  border-width: thin;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.nav-left {
+  display: flex;
+  gap: 3rem;
+  align-items: center;
+}
+
+.nav-right {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.nav-logo {
+  font-size: 1.5rem;
+  text-decoration: none;
+  letter-spacing: -0.5px;
+}
+
+.nav-link {
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.nav-link:hover {
+  color: var(--text-primary);
+}
+
+/* UI Elements */
+.tag {
+  background: #f0f0f0;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  display: inline-block;
+  margin-right: 5px;
+}
+
+.tag-ghost {
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  margin-left: 5px;
+  color: var(--text-secondary);
+}
+
+.btn-primary {
+  background: var(--text-primary);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--text-primary);
+  padding: 6px 14px;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+.login-btn {
+  border: none;
+  background: none;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.logout-btn {
+  border: none;
+  background: none;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.logout-btn:hover {
+  color: var(--text-primary);
+}
+
+.login-select {
+  border: 1px solid var(--text-primary);
+  padding: 8px 16px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: white;
+  border-radius: 4px;
+}
+
+.login-select:focus {
+  outline: 2px solid var(--accent);
+}
+
+.txt-input {
+  border: 1px solid var(--text-primary);
+  padding: 6px 14px;
+}
+
+.txt-input:focus {
+  outline: 2px;
+  outline-color: var(--accent);
+  outline-style: solid;
+}
+
+.header-avatar-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  object-fit: cover;
+  display: block;
+}
+
+.dropdown-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 8px;
+}

@@ -1,0 +1,184 @@
+.people-page {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.people-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.people-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.people-subtitle {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+.people-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 24px;
+}
+
+.researcher-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.researcher-card:hover {
+    /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px); */
+    border-color: var(--accent);
+}
+
+.researcher-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    gap: 12px;
+}
+
+.researcher-name {
+    font-size: 1.25rem;
+    margin: 0;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.researcher-country {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    background: var(--light-yellow);
+    padding: 4px 10px;
+    border-radius: 12px;
+    white-space: nowrap;
+}
+
+.researcher-info {
+    margin-bottom: 16px;
+}
+
+.researcher-institute {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 4px 0;
+    font-style: italic;
+}
+
+.researcher-degree {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 4px 0;
+}
+
+.researcher-interests {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.interests-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.interests-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.interests-tags .tag-ghost {
+    margin: 0;
+}
+
+/* 오른쪽 상단(국가 태그 + 별 버튼) 정렬을 위한 컨테이너 */
+.researcher-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* 별표 버튼 기본 스타일 */
+.bookmark-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    color: #cbd5e1;
+    /* 기본 회색 (테두리 색상) */
+}
+
+/* 마우스를 올렸을 때 살짝 커지고 선명해짐 */
+.bookmark-btn:hover {
+    transform: scale(1.15);
+    color: #94a3b8;
+}
+
+/* 북마크가 된 상태 (active) */
+.bookmark-btn.active {
+    color: #ffc107;
+    /* 밝은 노란색 */
+}
+
+/* 북마크 된 상태에서 호버 시 */
+.bookmark-btn.active:hover {
+    color: #ffb300;
+}
+
+/* Lucide 아이콘 선 두께 조절 (필요 시) */
+.bookmark-btn svg {
+    stroke-width: 2px;
+}
+
+
+
+/* recommendation reason (for later use) */
+.recommendation-reason {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.reason-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.reason-text {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    font-style: italic;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .people-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .people-header h1 {
+        font-size: 2rem;
+    }
+}

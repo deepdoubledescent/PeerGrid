@@ -181,11 +181,12 @@ export default function RecommendedPostsPage({ user }) {
       try {
         const likedResp = await getLikedPostsForUser(userKey);
         const likedPosts = likedResp?.result || likedResp || [];
+        console.log( "Liked posts:", likedPosts);
 
         if (!likedPosts.length) {
           setRecommendedPosts([]);
           setTotalResults(0);
-          setMessage("There aren't any compatible posts.");
+          setMessage("1There aren't any compatible posts.");
           return;
         }
 
@@ -196,22 +197,25 @@ export default function RecommendedPostsPage({ user }) {
         if (!likedTopicSet.size) {
           setRecommendedPosts([]);
           setTotalResults(0);
-          setMessage("There aren't any compatible posts.");
+          setMessage("2There aren't any compatible posts.");
           return;
         }
 
-        const allPostsResp = await searchPosts({
-          filter: {
-            sortBy: "date_newest",
-            page: 1,
-            query: "",
-            topics: [],
-            results_per_page: 200,
-          },
-        });
-
-        const allPosts = allPostsResp?.result?.posts || [];
+        
+        const filter = {
+          sortBy: searchParams.get("sortBy") || "date_newest",
+          page: parseInt(searchParams.get("page") || "1", 10),
+          query: searchParams.get("query") || "",
+          topics: searchParams.getAll("topic") || [],
+          results_per_page: parseInt(
+            searchParams.get("results_per_page") || "10",
+            10
+          ),
+        };
+        const allPostsResp = await searchPosts({ filter });
+        const allPosts = allPostsResp?.posts || [];
         const likedPostIds = new Set(likedPosts.map((post) => String(post.id)));
+        console.log(allPosts, "total posts found, filtering...");
 
         const matches = allPosts.filter((post) => {
           const postTopics = post.post_topics || [];
@@ -225,7 +229,7 @@ export default function RecommendedPostsPage({ user }) {
         if (!matches.length) {
           setRecommendedPosts([]);
           setTotalResults(0);
-          setMessage("There aren't any compatible posts.");
+          setMessage("3There aren't any compatible posts.");
           return;
         }
 
@@ -342,7 +346,7 @@ export default function RecommendedPostsPage({ user }) {
           })
         ) : (
           <div className="width-full center my-40 text-center text-gray-500">
-            {message || "There aren't any compatible posts."}
+            {message || "4There aren't any compatible posts."}
           </div>
         )}
       </div>

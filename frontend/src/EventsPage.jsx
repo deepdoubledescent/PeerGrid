@@ -10,20 +10,20 @@ export default function EventsPage({ user }) {
       label: "Browse Events",
       action: () => navigate("/events/search"),
     },
-    {
-      title: "My Events",
-      description: "View, edit, and manage the events you created.",
-      label: "My Events",
-      action: () => navigate("/events/my"),
-    },
-    {
-      title: "Registered Events",
-      description: "Track events you have registered for.",
-      label: "Registered Events",
-      action: () => navigate("/events/registered"),
-    },
     ...(user
       ? [
+          {
+            title: "My Events",
+            description: "View, edit, and manage the events you created.",
+            label: "My Events",
+            action: () => navigate("/events/my"),
+          },
+          {
+            title: "Registered Events",
+            description: "Track events you have registered for.",
+            label: "Registered Events",
+            action: () => navigate("/events/registered"),
+          },
           {
             title: "Create New Event",
             description: "Publish a new event for other users.",
@@ -40,13 +40,16 @@ export default function EventsPage({ user }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 auto-rows-fr">
         {cards.map((card, index) => {
-          const isOddLastCard = !user && cards.length % 2 === 1 && index === cards.length - 1;
+          const isOddLastCard =
+            cards.length % 2 === 1 && index === cards.length - 1;
 
           return (
             <div
               key={card.title}
               className={`card p-6 h-full flex flex-col ${
-                isOddLastCard ? "md:col-span-2 md:max-w-[calc(50%-0.75rem)] md:w-full md:mx-auto" : ""
+                isOddLastCard
+                  ? "md:col-span-2 md:max-w-[calc(50%-0.75rem)] md:w-full md:mx-auto"
+                  : ""
               }`}
             >
               <h2 className="text-xl font-medium mb-2">{card.title}</h2>

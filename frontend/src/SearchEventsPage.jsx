@@ -732,6 +732,33 @@ export default function SearchEventsPage({ user }) {
           <u>Next</u>
         </button>
       </div>
+      {user && (
+        <div className="flex flex-wrap justify-center gap-4 mt-10">
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => navigate("/events/my")}
+          >
+            My Events
+          </button>
+
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => navigate("/events/registered")}
+          >
+            Registered Events
+          </button>
+
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => navigate("/events/new")}
+          >
+            + Create New Event
+          </button>
+        </div>
+      )}
     </div>
   );
 }

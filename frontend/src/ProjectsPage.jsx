@@ -178,22 +178,26 @@ export default function ProjectsPage({ user }) {
   const cards = [
     {
       title: "All Projects",
-      description: "Search and filter research projects",
+      description: "Search and filter research projects.",
       label: "Browse Projects",
       action: () => navigate("/projects/all"),
     },
-    {
-      title: "My Applications",
-      description: "Track the projects you have applied to",
-      label: "View Applications",
-      action: () => navigate("/projects/my-applications"),
-    },
-    {
-      title: "New Project",
-      description: "Register and publish a new project",
-      label: "+ Register New Project",
-      action: () => navigate("/projects/new"),
-    },
+    ...(user
+      ? [
+          {
+            title: "My Applications",
+            description: "Track the projects you have applied.",
+            label: "View Applications",
+            action: () => navigate("/projects/my-applications"),
+          },
+          {
+            title: "New Project",
+            description: "Register and publish a new project.",
+            label: "+ Register New Project",
+            action: () => navigate("/projects/new"),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -208,7 +212,9 @@ export default function ProjectsPage({ user }) {
             <div
               key={card.title}
               className={`card p-6 h-full flex flex-col ${
-                isOddLastCard ? "md:col-span-2 md:max-w-[calc(50%-0.75rem)] md:w-full md:mx-auto" : ""
+                isOddLastCard
+                  ? "md:col-span-2 md:max-w-[calc(50%-0.75rem)] md:w-full md:mx-auto"
+                  : ""
               }`}
             >
               <h2 className="text-xl font-medium mb-2">{card.title}</h2>
@@ -536,6 +542,12 @@ export const ProjectsList = ({ user }) => {
         <div>
 
         <div className="project-container">
+            <div className="mb-8">
+                <h1 className="text-3xl font-semibold text-stone-900">Search Projects</h1>
+                <p className="text-stone-500 mt-2">
+                    Browse and filter research projects.
+                </p>
+            </div>
             <div className={`search-field flex-col ${!isAdvancedOpen && "overflow-hidden"}`}>
                 <div className="search-bar flex flex-row">
                     <div className="group w-full flex items-center border-b-1 border-black transition-all duration-300 focus-within:border-stone-600">

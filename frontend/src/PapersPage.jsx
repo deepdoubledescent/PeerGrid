@@ -11,7 +11,7 @@ export default function PapersPage({ user }) {
       disabled: true,
     },
     {
-      title: "All Papers",
+      title: "Search Papers",
       description: "Search and filter research papers across topics and fields.",
       label: "Browse Papers",
       action: () => navigate("/papers/all"),

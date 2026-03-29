@@ -6,19 +6,19 @@ export default function PeoplePage({ user }) {
   const cards = [
     {
       title: "Recommended People",
-      description: "Personalized Recommendations (Coming Soon)",
+      description: "Personalized Recommendations (Coming Soon).",
       label: "Find Matches",
       action: () => navigate("/people/recommended"),
     },
     {
       title: "All People",
-      description: "Search & Filter People",
+      description: "Search & Filter People.",
       label: "Browse People",
       action: () => navigate("/people/all"),
     },
     {
       title: "My Network",
-      description: "View & Manage Your Network",
+      description: "View & Manage Your Network.",
       label: "My Network",
       action: () => navigate("/people/network"),
     },

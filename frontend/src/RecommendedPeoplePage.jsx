@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Landmark, MapPin, Sparkles } from "lucide-react";
 import { getMatchRecommendations } from "./Controller";
 
-// --- Score Badge ---
+// Score Badge
 const ScoreBadge = ({ score }) => {
     const pct = Math.round(score * 100);
     const color = pct >= 60 ? "#16a34a" : pct >= 40 ? "#d97706" : "#6b7280";
@@ -24,7 +24,7 @@ const ScoreBadge = ({ score }) => {
     );
 };
 
-// --- Researcher Card ---
+// Researcher Card
 const RecommendedCard = ({ rec }) => {
     const navigate = useNavigate();
     const shortId = rec.id?.split("/").pop();

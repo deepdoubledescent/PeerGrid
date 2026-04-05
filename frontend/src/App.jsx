@@ -47,6 +47,7 @@ import UserEventsPage from "./UserEventsPage";
 import { validateSignOn } from './Controller';
 import RecommendedPostsPage from "./RecommendedPostsPage";
 import RecommendedPapersPage from "./RecommendedPapersPage";
+import RecommendedProjectsPage from "./RecommendedProjectsPage";
 
 function useScrollThreshold(threshold = 50) {
   const [isPastThreshold, setIsPastThreshold] = useState(false);
@@ -427,6 +428,7 @@ function App() {
                     <Route path="/profile/:userId/events" element={<UserEventsPage user={user} />} />
                     <Route path="/posts/recommended" element={<RecommendedPostsPage user={user} />} />
                     <Route path="/papers/recommended" element={<RecommendedPapersPage user={user} />} />
+                    <Route path="/projects/recommended" element={<RecommendedProjectsPage user={user} />}/>
                   </Routes>
                 </Layout>
               //</RequireOpenAlexRoute>

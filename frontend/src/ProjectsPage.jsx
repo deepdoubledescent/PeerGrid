@@ -184,18 +184,24 @@ export default function ProjectsPage({ user }) {
     },
     ...(user
       ? [
-          {
-            title: "My Applications",
-            description: "Track the projects you have applied.",
-            label: "View Applications",
-            action: () => navigate("/projects/my-applications"),
-          },
-          {
-            title: "New Project",
-            description: "Register and publish a new project.",
-            label: "+ Register New Project",
-            action: () => navigate("/projects/new"),
-          },
+            {
+                title: "Recommended Projects",
+                description: "Projects matched to your research interests and location.",
+                label: "View Recommendations",
+                action: () => navigate("/projects/recommended"),
+            },
+            {
+                title: "My Applications",
+                description: "Track the projects you have applied.",
+                label: "View Applications",
+                action: () => navigate("/projects/my-applications"),
+            },
+            {
+                title: "New Project",
+                description: "Register and publish a new project.",
+                label: "+ Register New Project",
+                action: () => navigate("/projects/new"),
+            },
         ]
       : []),
   ];
@@ -985,6 +991,12 @@ export const ProjectsList = ({ user }) => {
                 flexWrap: 'wrap',
                 justifyContent: 'center'
             }}>
+            <button
+                className="btn-primary"
+                onClick={() => navigate("/projects/recommended")}
+              >
+                Recommended Projects
+            </button>
             <button
                 className="btn-primary"
                 onClick={() => navigate("/projects/my-applications")}

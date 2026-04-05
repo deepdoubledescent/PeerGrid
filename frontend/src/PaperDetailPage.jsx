@@ -48,6 +48,15 @@ const formatDate = (dateString) => {
   });
 };
 
+const extractPaperTopics = (paper) => {
+  return (paper?.topics || [])
+    .map((topic) => ({
+      topic_id: Number(String(topic.id || "").match(/\d+/)?.[0]),
+      score: Number(topic.score) || 0,
+    }))
+    .filter((topic) => Number.isFinite(topic.topic_id) && topic.score > 0);
+};
+
 const CommentEditor = ({
   onSubmit,
   replyingTo,
@@ -456,7 +465,7 @@ export default function PaperDetailPage({ user }) {
       return;
     }
 
-    await toggleLikePaper(workId);
+    await toggleLikePaper(workId, extractPaperTopics(paper));
 
     const { likeCounts, hasLiked, commentCounts } = await getPaperMetaBatch([workId]);
 

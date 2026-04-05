@@ -73,3 +73,59 @@ export async function getPaperById(paperId) {
 
   return data
 }
+
+function shuffleArray(items) {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+export async function getRecommendedWorksByTopics({
+  topicIds = [],
+  excludeIds = [],
+  perPage = 20,
+  user,
+}) {
+  const cleanedTopicIds = [...new Set(
+    (topicIds || [])
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id) && id > 0)
+      .map((id) => `T${id}`)
+  )];
+
+  if (!cleanedTopicIds.length) {
+    return [];
+  }
+
+  const searchParams = new URLSearchParams();
+  searchParams.set("per_page", "100"); // bigger pool
+  searchParams.set("filter", `topics.id:${cleanedTopicIds.join("|")}`);
+
+  if (user?.email) {
+    searchParams.set("mailto", user.email);
+  }
+
+  const url = `${BASE}/works?${searchParams.toString()}`;
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("OpenAlex error:", text);
+    throw new Error("Failed to fetch recommended papers");
+  }
+
+  const data = await res.json();
+  const results = data.results ?? [];
+
+  const excluded = new Set((excludeIds || []).map((id) => String(id)));
+
+  const filtered = results.filter((paper) => {
+    const workId = paper.id.split("/").filter(Boolean).pop();
+    return !excluded.has(workId);
+  });
+
+  return shuffleArray(filtered).slice(0, perPage);
+}

@@ -10,9 +10,11 @@ import {
   toggleLikePaper,
   getPaperMetaBatch,
   editComment,
-  deleteComment
+  deleteComment,
+  createReport,
 } from "./Controller";
 import { getPaperById } from "./papersApi";
+import ReportDialog from "./ReportDialog";
 import {
   MessageSquare,
   ExternalLink,
@@ -27,7 +29,8 @@ import {
   ChevronRight,
   CornerDownRight,
   X,
-  Trash2
+  Trash2,
+  Flag,
 } from 'lucide-react';
 
 const reconstructAbstract = (invertedIndex) => {
@@ -160,7 +163,15 @@ const unfold_count = (level) => {
   return level.reduce((part_sum, m) => part_sum + unfold_count(m.replies), level.length);
 };
 
-const CommentNode = ({ comment, depth = 0, onReply, user, onEditComment, onDeleteComment }) => {
+const CommentNode = ({
+  comment,
+  depth = 0,
+  onReply,
+  user,
+  onEditComment,
+  onDeleteComment,
+  onReportComment,
+}) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const hasReplies = comment.replies && comment.replies.length > 0;
@@ -230,6 +241,15 @@ const CommentNode = ({ comment, depth = 0, onReply, user, onEditComment, onDelet
           </>
         )}
 
+        {!isOwnComment && !isEditing && (
+          <button
+            onClick={() => onReportComment(comment)}
+            className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors"
+          >
+            <Flag size={12} /> Report
+          </button>
+        )}
+
         {isOwnComment && isEditing && (
           <button
             onClick={() => setIsEditing(false)}
@@ -261,6 +281,7 @@ const CommentNode = ({ comment, depth = 0, onReply, user, onEditComment, onDelet
               user={user}
               onEditComment={onEditComment}
               onDeleteComment={onDeleteComment}
+              onReportComment={onReportComment}
             />
           ))}
         </div>
@@ -269,7 +290,14 @@ const CommentNode = ({ comment, depth = 0, onReply, user, onEditComment, onDelet
   );
 };
 
-const CommentSection = ({ comments, user, onPostComment, onEditComment, onDeleteComment }) => {
+const CommentSection = ({
+  comments,
+  user,
+  onPostComment,
+  onEditComment,
+  onDeleteComment,
+  onReportComment,
+}) => {
   const [replyingTo, setReplyingTo] = useState(null);
 
   const handleEditorSubmit = (text, replyToId) => {
@@ -299,6 +327,7 @@ const CommentSection = ({ comments, user, onPostComment, onEditComment, onDelete
                 user={user}
                 onEditComment={onEditComment}
                 onDeleteComment={onDeleteComment}
+                onReportComment={onReportComment}
               />
             ))
           )}
@@ -338,6 +367,14 @@ export default function PaperDetailPage({ user }) {
     commentCount: 0,
   });
   const [status, setStatus] = useState({ type: "", message: "" });
+
+  const [reportState, setReportState] = useState({
+    open: false,
+    type: null,
+    itemId: null,
+    label: "",
+  });
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   useEffect(() => {
     const hasLocationData = location.state?.paper_object;
@@ -476,6 +513,51 @@ export default function PaperDetailPage({ user }) {
     });
   };
 
+  const openReportDialog = ({ type, itemId, label }) => {
+    if (!user) {
+      alert("Please log in to submit a report.");
+      return;
+    }
+
+    setReportState({
+      open: true,
+      type,
+      itemId,
+      label,
+    });
+  };
+
+  const closeReportDialog = () => {
+    if (isSubmittingReport) return;
+
+    setReportState({
+      open: false,
+      type: null,
+      itemId: null,
+      label: "",
+    });
+  };
+
+  const handleSubmitReport = async (note) => {
+    try {
+      setIsSubmittingReport(true);
+
+      await createReport({
+        reportedItemType: reportState.type,
+        reportedItemId: reportState.itemId,
+        reportNote: note,
+      });
+
+      alert("Report submitted. Thank you.");
+      closeReportDialog();
+    } catch (err) {
+      console.error(err);
+      alert(err?.message || "Failed to submit report.");
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 max-w-3xl mx-auto">
@@ -508,7 +590,7 @@ export default function PaperDetailPage({ user }) {
             </div>
           </div>
 
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-2 mt-2 flex-wrap">
             <button
               className="btn-outline"
               onClick={() => window.open(
@@ -527,6 +609,25 @@ export default function PaperDetailPage({ user }) {
             >
               {meta.liked ? "♥" : "♡"} Like {meta.likeCount ?? 0}
             </button>
+
+            <div className="btn-outline px-5 py-2">
+              Comments {meta.commentCount ?? 0}
+            </div>
+
+            <button
+              type="button"
+              className="btn-outline px-5 py-2 flex items-center"
+              onClick={() =>
+                openReportDialog({
+                  type: "paper",
+                  itemId: paperId,
+                  label: "paper",
+                })
+              }
+            >
+              <Flag size={14} />
+              <span className="ml-2">Report</span>
+            </button>
           </div>
         </header>
 
@@ -543,6 +644,13 @@ export default function PaperDetailPage({ user }) {
           onPostComment={handlePostComment}
           onEditComment={handleEditComment}
           onDeleteComment={handleDeleteComment}
+          onReportComment={(comment) =>
+            openReportDialog({
+              type: "paper_comment",
+              itemId: comment.id,
+              label: "comment",
+            })
+          }
         />
 
         {status.message && (
@@ -550,6 +658,15 @@ export default function PaperDetailPage({ user }) {
             {status.message}
           </div>
         )}
+
+        <ReportDialog
+          isOpen={reportState.open}
+          onClose={closeReportDialog}
+          onSubmit={handleSubmitReport}
+          title="Report paper"
+          subjectLabel={reportState.label || "item"}
+          loading={isSubmittingReport}
+        />
       </div>
     );
   }

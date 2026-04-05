@@ -4,38 +4,40 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { 
-  deleteProject, 
-  getProject, 
-  applyToProject, 
-  hasUserAppliedToProject, 
-  toggleLikeProject, 
-  hasUserLikedProject, 
+import { Flag } from "lucide-react";
+import {
+  deleteProject,
+  getProject,
+  applyToProject,
+  hasUserAppliedToProject,
+  toggleLikeProject,
+  hasUserLikedProject,
   getLikeCountForProject,
   getUploadURL,
   getDocumentDownloadURL,
-  updateProject
+  updateProject,
+  createReport,
 } from "./Controller";
+import ReportDialog from "./ReportDialog";
 
 export default function ProjectDetailPage({ user }) {
   const { projectId } = useParams();
   const navigate = useNavigate();
 
-  // apply button state
   const [applyState, setApplyState] = useState("idle");
   const [applyError, setApplyError] = useState("");
-  const [isUploading, setIsUploading] = useState(false); // <-- NEW: Block apply while uploading
+  const [isUploading, setIsUploading] = useState(false);
 
-  // file states now store metadata objects containing the application_document_id
-  const [docFilesById, setDocFilesById] = useState({}); 
+  const [docFilesById, setDocFilesById] = useState({});
   const [additionalFiles, setAdditionalFiles] = useState([]);
   const [additionalInputKey, setAdditionalInputKey] = useState(0);
 
-  // like button states
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [likeError, setLikeError] = useState("");
   const [project, setProject] = useState(null);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   useEffect(() => {
     const initial_project_load = async () => {
@@ -70,7 +72,6 @@ export default function ProjectDetailPage({ user }) {
 
     checkApplied();
   }, [user, project]);
-  
 
   const requiredDocs = project?.requiredDocuments ?? [];
 
@@ -80,22 +81,21 @@ export default function ProjectDetailPage({ user }) {
 
   const canApply = missingRequiredDocs.length === 0 && !isUploading;
 
-  const onDelete = async() => {
+  const onDelete = async () => {
     const status = await deleteProject(projectId);
     if (status.success) {
       navigate("/projects");
     } else {
       alert("Error Deleting project: ", status);
     }
-  }
+  };
 
-  // --- NEW: Helper to handle immediate uploads to S3 ---
   const handleImmediateUpload = async (file, documentId) => {
     try {
       const { url, application_document_id } = await getUploadURL(file.name, file.type, file.size, documentId);
 
-      console.log(url, application_document_id)
-      
+      console.log(url, application_document_id);
+
       const uploadRes = await fetch(url, {
         method: 'PUT',
         body: file,
@@ -113,12 +113,10 @@ export default function ProjectDetailPage({ user }) {
     }
   };
 
-  // --- NEW: Helper to handle downloading an uploaded file ---
   const handleDownload = async (application_document_id) => {
     try {
-      // Assuming getDocumentDownloadURL returns { downloadUrl: "https://..." }
       const res = await getDocumentDownloadURL(application_document_id);
-      window.open(res.url || res, "_blank"); 
+      window.open(res.url || res, "_blank");
     } catch (err) {
       alert("Failed to get download link");
     }
@@ -157,7 +155,7 @@ export default function ProjectDetailPage({ user }) {
         documents.push(fileData.application_document_id);
       }
 
-      additionalFiles.forEach((fileData, index) => {
+      additionalFiles.forEach((fileData) => {
         documents.push(fileData.application_document_id);
       });
 
@@ -230,25 +228,49 @@ export default function ProjectDetailPage({ user }) {
     }
   };
 
-  var isOwner = user.id == project?.author;
+  const isOwner = user?.id == project?.author;
   const projectLocation = [project?.city, project?.country || project?.location].filter(Boolean).join(', ');
 
   const onToggleCompleted = async () => {
-  try {
-    const updated = await updateProject(project.id, {
-      ...project,
-      completed: !project.completed
-    });
+    try {
+      const updated = await updateProject(project.id, {
+        ...project,
+        completed: !project.completed
+      });
 
-    setProject(updated);
-  } catch (err) {
-    alert("Failed to update project status");
-  }
-};
+      setProject(updated);
+    } catch (err) {
+      alert("Failed to update project status");
+    }
+  };
+
+  const handleSubmitProjectReport = async (note) => {
+    if (!user) {
+      alert("Please login to submit a report.");
+      return;
+    }
+
+    try {
+      setIsSubmittingReport(true);
+
+      await createReport({
+        reportedItemType: "project",
+        reportedItemId: project.id,
+        reportNote: note,
+      });
+
+      alert("Report submitted. Thank you.");
+      setShowReportDialog(false);
+    } catch (err) {
+      console.error(err);
+      alert(err?.message || "Failed to submit report.");
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      {/* Header */}
       <header className="mt-4">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -305,7 +327,6 @@ export default function ProjectDetailPage({ user }) {
         </div>
       </header>
 
-      {/* Short description */}
       <section className="mt-6">
         <h2 className="text-lg font-medium mb-2">Short Description</h2>
         <div className="text-lg leading-relaxed text-gray-800">
@@ -317,7 +338,6 @@ export default function ProjectDetailPage({ user }) {
         </div>
       </section>
 
-      {/* Topics, Skills, Workload */}
       <section className="mt-8 grid grid-cols-1 sm:grid-cols-4 gap-6">
         <div>
           <h2 className="text-lg font-medium mb-2">Project Types</h2>
@@ -371,7 +391,6 @@ export default function ProjectDetailPage({ user }) {
         </div>
       </section>
 
-      {/* Long description */}
       <section className="mt-10">
         <h2 className="text-xl font-medium mb-3">Detailed description</h2>
         <div className="leading-relaxed whitespace-pre-line">
@@ -383,7 +402,6 @@ export default function ProjectDetailPage({ user }) {
         </div>
       </section>
 
-      {/* Application documents */}
       {!isOwner && applyState !== "success" && (
         <section className="mt-10">
           <h2 className="text-xl font-medium mb-3">Application documents</h2>
@@ -411,12 +429,11 @@ export default function ProjectDetailPage({ user }) {
                         <div className="text-xs opacity-60">
                           Accepted: {d.type || "any"}
                         </div>
-                        
-                        {/* NEW: Clickable file name to trigger download */}
+
                         {fileData && (
                           <div className="mt-1 text-sm">
-                            Selected:{" "} 
-                            <button 
+                            Selected:{" "}
+                            <button
                               className="font-mono text-blue-600 hover:underline cursor-pointer"
                               onClick={() => handleDownload(fileData.application_document_id)}
                             >
@@ -427,7 +444,6 @@ export default function ProjectDetailPage({ user }) {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        {/* NEW: OnChange handler added upload logic */}
                         <input
                           id={`file-${d.id}`}
                           type="file"
@@ -436,18 +452,18 @@ export default function ProjectDetailPage({ user }) {
                           onChange={async (e) => {
                             const f = e.target.files?.[0] || null;
                             if (!f) return;
-                            
+
                             setIsUploading(true);
                             try {
                               const appDocId = await handleImmediateUpload(f, d.id);
-                              setDocFilesById((prev) => ({ 
-                                ...prev, 
-                                [d.id]: { 
-                                  name: f.name, 
-                                  size: f.size, 
-                                  type: f.type, 
-                                  application_document_id: appDocId 
-                                } 
+                              setDocFilesById((prev) => ({
+                                ...prev,
+                                [d.id]: {
+                                  name: f.name,
+                                  size: f.size,
+                                  type: f.type,
+                                  application_document_id: appDocId
+                                }
                               }));
                             } catch (err) {
                               alert(`Failed to upload ${f.name}`);
@@ -457,8 +473,8 @@ export default function ProjectDetailPage({ user }) {
                           }}
                         />
 
-                        <label htmlFor={`file-${d.id}`} className="btn-outline cursor-pointer px-4 py-2"> 
-                          {fileData ? "Change file" : "Choose file"} 
+                        <label htmlFor={`file-${d.id}`} className="btn-outline cursor-pointer px-4 py-2">
+                          {fileData ? "Change file" : "Choose file"}
                         </label>
                       </div>
 
@@ -469,7 +485,6 @@ export default function ProjectDetailPage({ user }) {
             </div>
           )}
 
-          {/* Additional files (multiple) */}
           <div className="mt-4 p-3 rounded-xl border">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -482,10 +497,9 @@ export default function ProjectDetailPage({ user }) {
                   <div className="mt-1 text-sm opacity-60">No additional files selected.</div>
                 ) : (
                   <ul className="mt-2 space-y-2">
-                    {/* NEW: Clickable filenames for downloads */}
                     {additionalFiles.map((f, idx) => (
                       <li key={`${f.application_document_id}-${idx}`} className="flex items-center gap-2">
-                        <button 
+                        <button
                           className="text-sm text-blue-600 hover:underline truncate max-w-[320px]"
                           onClick={() => handleDownload(f.application_document_id)}
                         >
@@ -519,7 +533,6 @@ export default function ProjectDetailPage({ user }) {
                   </button>
                 )}
 
-                {/* NEW: OnChange handler handles multiple immediate uploads */}
                 <input
                   key={additionalInputKey}
                   id="additional-files"
@@ -531,17 +544,17 @@ export default function ProjectDetailPage({ user }) {
                     if (picked.length === 0) return;
 
                     setIsUploading(true);
-                    
+
                     for (const f of picked) {
                       try {
                         const appDocId = await handleImmediateUpload(f, null);
                         setAdditionalFiles((prev) => [
-                          ...prev, 
-                          { 
-                            name: f.name, 
-                            size: f.size, 
-                            type: f.type, 
-                            application_document_id: appDocId 
+                          ...prev,
+                          {
+                            name: f.name,
+                            size: f.size,
+                            type: f.type,
+                            application_document_id: appDocId
                           }
                         ]);
                       } catch (err) {
@@ -576,16 +589,13 @@ export default function ProjectDetailPage({ user }) {
         </section>
       )}
 
-      {/* Apply error */}
       {applyState === "error" && (
         <div className="mt-6 text-sm text-red-600">{applyError}</div>
       )}
 
-      {/* Like error */}
       {likeError && <div className="mt-6 text-sm text-red-600">{likeError}</div>}
 
-      {/* Buttons */}
-      <section className="mt-12 flex justify-end gap-3">
+      <section className="mt-12 flex justify-end gap-3 flex-wrap">
         <button
           type="button"
           className={`btn-outline px-5 py-2 ${liked ? "text-red-600" : ""}`}
@@ -594,6 +604,23 @@ export default function ProjectDetailPage({ user }) {
         >
           {liked ? "♥" : "♡"} Like {likeCount}
         </button>
+
+        {!isOwner && (
+          <button
+            type="button"
+            className="btn-outline px-5 py-2 flex items-center"
+            onClick={() => {
+              if (!user) {
+                alert("Please login to submit a report.");
+                return;
+              }
+              setShowReportDialog(true);
+            }}
+          >
+            <Flag size={14} />
+            <span className="ml-2">Report</span>
+          </button>
+        )}
 
         {isOwner ? (
           <button
@@ -610,7 +637,7 @@ export default function ProjectDetailPage({ user }) {
             onClick={onApply}
             disabled={applyState === "loading" || applyState === "success" || !canApply || isUploading}
           >
-             {isUploading
+            {isUploading
               ? "Uploading Files..."
               : applyState === "loading"
               ? "Applying..."
@@ -620,6 +647,15 @@ export default function ProjectDetailPage({ user }) {
           </button>
         )}
       </section>
+
+      <ReportDialog
+        isOpen={showReportDialog}
+        onClose={() => setShowReportDialog(false)}
+        onSubmit={handleSubmitProjectReport}
+        title="Report project"
+        subjectLabel="project"
+        loading={isSubmittingReport}
+      />
     </div>
   );
 }

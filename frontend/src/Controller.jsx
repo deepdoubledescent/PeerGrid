@@ -899,7 +899,22 @@ const getRecommendedProjects = async (page = 1, results_per_page = 10) => {
   }
 };
 
+const createReport = async ({ reportedItemType, reportedItemId, reportNote }) => {
+  try {
+    const result = await api.post("/user/createReport", {
+      reportedItemType,
+      reportedItemId,
+      reportNote,
+    });
+    return result;
+  } catch (err) {
+    alert(err?.message || "Failed to submit report.");
+    throw err;
+  }
+};
+
 export {
+  createReport,
   getRecommendedProjects,
   getTopTopicScores,
   getAllRequiredInformationForUserPage,

@@ -10,7 +10,9 @@ import {
   addCommentToPost,
   editCommentOnPost,
   deleteCommentFromPost,
+  createReport,
 } from "./Controller";
+import ReportDialog from "./ReportDialog";
 import {
   MessageSquare,
   Send,
@@ -25,6 +27,7 @@ import {
   CornerDownRight,
   X,
   Trash2,
+  Flag,
 } from "lucide-react";
 
 const formatDate = (dateString) => {
@@ -179,7 +182,15 @@ const unfold_count = (level) => {
   );
 };
 
-const CommentNode = ({ comment, depth = 0, onReply, user, onEditComment, onDeleteComment }) => {
+const CommentNode = ({
+  comment,
+  depth = 0,
+  onReply,
+  user,
+  onEditComment,
+  onDeleteComment,
+  onReportComment,
+}) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const hasReplies = comment.replies && comment.replies.length > 0;
@@ -242,6 +253,15 @@ const CommentNode = ({ comment, depth = 0, onReply, user, onEditComment, onDelet
           </>
         )}
 
+        {!isOwnComment && !isEditing && (
+          <button
+            onClick={() => onReportComment(comment)}
+            className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors"
+          >
+            <Flag size={12} /> Report
+          </button>
+        )}
+
         {isOwnComment && isEditing && (
           <button
             onClick={() => setIsEditing(false)}
@@ -273,6 +293,7 @@ const CommentNode = ({ comment, depth = 0, onReply, user, onEditComment, onDelet
               user={user}
               onEditComment={onEditComment}
               onDeleteComment={onDeleteComment}
+              onReportComment={onReportComment}
             />
           ))}
         </div>
@@ -281,7 +302,14 @@ const CommentNode = ({ comment, depth = 0, onReply, user, onEditComment, onDelet
   );
 };
 
-const CommentSection = ({ comments, user, onPostComment, onEditComment, onDeleteComment }) => {
+const CommentSection = ({
+  comments,
+  user,
+  onPostComment,
+  onEditComment,
+  onDeleteComment,
+  onReportComment,
+}) => {
   const [replyingTo, setReplyingTo] = useState(null);
 
   const handleEditorSubmit = (text, replyToId) => {
@@ -315,6 +343,7 @@ const CommentSection = ({ comments, user, onPostComment, onEditComment, onDelete
                 user={user}
                 onEditComment={onEditComment}
                 onDeleteComment={onDeleteComment}
+                onReportComment={onReportComment}
               />
             ))
           )}
@@ -353,6 +382,13 @@ export default function PostDetailPage({ user }) {
     likeCount: 0,
     commentCount: 0,
   });
+  const [reportState, setReportState] = useState({
+    open: false,
+    type: null,
+    itemId: null,
+    label: "",
+  });
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   const isOwner =
     post && user && String(user.id || user.sub) === String(post.author);
@@ -460,6 +496,51 @@ export default function PostDetailPage({ user }) {
     }
   };
 
+  const openReportDialog = ({ type, itemId, label }) => {
+    if (!user) {
+      alert("Please log in to submit a report.");
+      return;
+    }
+
+    setReportState({
+      open: true,
+      type,
+      itemId,
+      label,
+    });
+  };
+
+  const closeReportDialog = () => {
+    if (isSubmittingReport) return;
+
+    setReportState({
+      open: false,
+      type: null,
+      itemId: null,
+      label: "",
+    });
+  };
+
+  const handleSubmitReport = async (note) => {
+    try {
+      setIsSubmittingReport(true);
+
+      await createReport({
+        reportedItemType: reportState.type,
+        reportedItemId: reportState.itemId,
+        reportNote: note,
+      });
+
+      alert("Report submitted. Thank you.");
+      closeReportDialog();
+    } catch (err) {
+      console.error(err);
+      alert(err?.message || "Failed to submit report.");
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-8 max-w-4xl mx-auto">
@@ -515,7 +596,7 @@ export default function PostDetailPage({ user }) {
           {post.author_display_name || "Unknown user"}
         </div>
 
-        <div className="flex gap-2 mt-2 mb-6">
+        <div className="flex gap-2 mt-2 mb-6 flex-wrap">
           <button
             type="button"
             className={`btn-outline px-5 py-2 ${meta.liked ? "text-red-600" : ""}`}
@@ -527,6 +608,23 @@ export default function PostDetailPage({ user }) {
           <div className="btn-outline px-5 py-2">
             Comments {meta.commentCount ?? 0}
           </div>
+
+          {!isOwner && (
+            <button
+              type="button"
+              className="btn-outline px-5 py-2 flex items-center"
+              onClick={() =>
+                openReportDialog({
+                  type: "post",
+                  itemId: post.id,
+                  label: "post",
+                })
+              }
+            >
+              <Flag size={14} />
+              <span className="ml-2">Report</span>
+            </button>
+          )}
         </div>
 
         {post.short_text?.trim() && (
@@ -572,6 +670,13 @@ export default function PostDetailPage({ user }) {
         onPostComment={handlePostComment}
         onEditComment={handleEditComment}
         onDeleteComment={handleDeleteComment}
+        onReportComment={(comment) =>
+          openReportDialog({
+            type: "post_comment",
+            itemId: comment.id,
+            label: "comment",
+          })
+        }
       />
 
       <div className="flex flex-wrap justify-center gap-4 mt-10">
@@ -610,6 +715,15 @@ export default function PostDetailPage({ user }) {
           + Create New Post
         </button>
       </div>
+
+      <ReportDialog
+        isOpen={reportState.open}
+        onClose={closeReportDialog}
+        onSubmit={handleSubmitReport}
+        title="Report post"
+        subjectLabel={reportState.label || "item"}
+        loading={isSubmittingReport}
+      />
     </div>
   );
 }

@@ -890,7 +890,17 @@ const getTopTopicScores = async (limit = 10) => {
   }
 };
 
+const getRecommendedProjects = async (page = 1, results_per_page = 10) => {
+  try {
+    return await api.post('/project/getRecommendedProjects', { page, results_per_page });
+  } catch (err) {
+    alert(err);
+    throw err;
+  }
+};
+
 export {
+  getRecommendedProjects,
   getTopTopicScores,
   getAllRequiredInformationForUserPage,
   getPositionTitles,

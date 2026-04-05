@@ -948,6 +948,12 @@ const MyProjectApplications = ({ user }) => {
             <div className="flex justify-center gap-6 mt-8">
                 <button
                     className="btn-primary"
+                    onClick={() => navigate("/projects/recommended")}
+                >
+                    Recommended Projects
+                </button>
+                <button
+                    className="btn-primary"
                     onClick={() => navigate("/projects")}
                 >
                     Browse Projects

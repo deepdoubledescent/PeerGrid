@@ -346,10 +346,10 @@ const hasUserLikedPaper = async (paperId) => {
   }
 };
 
-// This one is not used as well. 
-const toggleLikePaper = async (paperId) => {
+
+const toggleLikePaper = async (paperId, topics = []) => {
   try {
-    const result = await api.post('/user/toggleLikePaper', { paperId });
+    const result = await api.post('/user/toggleLikePaper', { paperId, topics });
     return result
   } catch (err) {
     alert(err);
@@ -882,7 +882,16 @@ const getAllRequiredInformationForUserPage = async (userId) => {
   }
 };
 
+const getTopTopicScores = async (limit = 10) => {
+  try {
+    return await api.post('/user/getTopTopicScores', { limit });
+  } catch (err) {
+    alert(err);
+  }
+};
+
 export {
+  getTopTopicScores,
   getAllRequiredInformationForUserPage,
   getPositionTitles,
   getPositionFields,

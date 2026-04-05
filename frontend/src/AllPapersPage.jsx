@@ -2,7 +2,16 @@ import { useEffect, useState } from "react";
 import { Search, X, Minus, Landmark, Calendar as CalendarIcon, MessageSquareText } from "lucide-react";
 import { searchInstitutions, searchWorks } from "./papersApi";
 import { toggleLikePaper, getPaperMetaBatch } from "./Controller";
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+
+const extractPaperTopics = (paper) => {
+  return (paper?.topics || [])
+    .map((topic) => ({
+      topic_id: Number(String(topic.id || "").match(/\d+/)?.[0]),
+      score: Number(topic.score) || 0,
+    }))
+    .filter((topic) => Number.isFinite(topic.topic_id) && topic.score > 0);
+};
 
 /**
  * ListEntry is now a pure "Presentational" component.
@@ -44,7 +53,7 @@ const ListEntry = ({ paper, liked, likeCount, commentCount, onTogglePaperLike })
           type="button"
           className={`btn-outline px-5 py-2 ${liked ? "text-red-600" : ""}`}
           aria-label="Like paper"
-          onClick={() => onTogglePaperLike(paper_id)}
+          onClick={() => onTogglePaperLike(paper_id, paper)}
         >
           {liked ? "♥" : "♡"} Like {likeCount ?? 0}
         </button>
@@ -65,6 +74,7 @@ const ListEntry = ({ paper, liked, likeCount, commentCount, onTogglePaperLike })
 };
 
 export default function AllPapersPage({ user }) {
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [sinceYear, setSinceYear] = useState("");
   const [institutionQuery, setInstitutionQuery] = useState("");
@@ -216,7 +226,7 @@ export default function AllPapersPage({ user }) {
     syncMetadata();
   }, [papers, user]);
 
-  const onTogglePaperLike = async (workId) => {
+  const onTogglePaperLike = async (workId, paper) => {
     setStatus({ type: "", message: "" });
 
     if (!user) {
@@ -224,7 +234,7 @@ export default function AllPapersPage({ user }) {
       return;
     }
 
-    await toggleLikePaper(workId);
+    await toggleLikePaper(workId, extractPaperTopics(paper));
 
     const { likeCounts, hasLiked, commentCounts } = await getPaperMetaBatch([workId]);
 
@@ -421,6 +431,44 @@ export default function AllPapersPage({ user }) {
           {status.message}
         </div>
       )}
+      {/* Spacer so the fixed bottom bar does not cover content */}
+<div style={{ height: '100px' }}></div>
+
+{/* Fixed bottom bar */}
+<div
+  style={{
+    position: 'fixed',
+    bottom: 0,
+    left: 0,
+    width: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderTop: '1px solid #e5e5e5',
+    backdropFilter: 'blur(5px)',
+    padding: '1.5rem 0',
+    display: 'flex',
+    justifyContent: 'center',
+    zIndex: 100,
+    boxShadow: '0 -4px 20px rgba(0,0,0,0.03)',
+  }}
+>
+  <div
+    style={{
+      display: 'flex',
+      gap: '0.75rem',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+    }}
+  >
+    <button
+      className="btn-primary"
+      onClick={() => navigate("/papers/recommended")}
+      type="button"
+    >
+      Recommended Papers
+    </button>
+  </div>
+</div>
     </div>
   );
 }

@@ -1,63 +1,90 @@
 const BASE = "https://api.openalex.org";
+
 function buildMailto(user) {
   if (!user?.email) return "";
   return `&mailto=${encodeURIComponent(user.email)}`;
 }
 
-export async function getWorkById(workId) {
+async function fetchJson(url, errorPrefix = "Request failed") {
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`${errorPrefix}: ${res.status} ${text}`);
+  }
+
+  return await res.json();
+}
+
+function normalizeInstitutionResult(inst) {
+  const rawId = inst.id || inst.entity_id || inst.openalex_id || "";
+  const displayName = inst.display_name || inst.name || "";
+
+  if (!rawId || !displayName) return null;
+
+  // Normalize autocomplete IDs like "https://openalex.org/I123..."
+  let normalizedId = rawId;
+  if (typeof rawId === "string" && rawId.includes("openalex.org/")) {
+    normalizedId = rawId;
+  }
+
+  return {
+    id: normalizedId,
+    display_name: displayName,
+  };
+}
+
+export async function getWorkById(workId, user) {
   if (!workId) return null;
 
   const s = String(workId).trim();
 
   if (s.startsWith("https://api.openalex.org/works/")) {
-    const res = await fetch(s);
-    if (!res.ok) return null;
-    return await res.json();
+    return await fetchJson(`${s}${user?.email ? `?mailto=${encodeURIComponent(user.email)}` : ""}`, "Failed to fetch work");
   }
 
   const match = s.match(/W\d+/);
   const wid = match ? match[0] : null;
   if (!wid) return null;
 
-  const url = `https://api.openalex.org/works/${wid}`;
-
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  return await res.json();
+  const url = `${BASE}/works/${wid}?${buildMailto(user).replace(/^&/, "")}`;
+  return await fetchJson(url, "Failed to fetch work");
 }
 
-
 export async function searchInstitutions(query, user) {
-  if (!query) return [];
+  const value = String(query || "").trim();
+  if (!value) return [];
 
-  const res = await fetch(
-    `${BASE}/institutions?search=${encodeURIComponent(query)}&per_page=5${buildMailto(user)}`
-  );
+  const url = `${BASE}/autocomplete/institutions?q=${encodeURIComponent(value)}${buildMailto(user)}`;
+  const data = await fetchJson(url, "Institution search failed");
 
-  const data = await res.json();
-  return data.results ?? [];
+  return (data.results || [])
+    .map(normalizeInstitutionResult)
+    .filter(Boolean);
 }
 
 export async function searchWorks(
-  { q, sinceYear, institutionId, cursor = "*" },
+  { q, sinceYear, institutionId, cursor = "*", perPage = 10 } = {},
   user
 ) {
   const filters = [];
 
-  if (sinceYear) {
-    filters.push(`from_publication_date:${sinceYear}-01-01`);
+  const trimmedQuery = String(q || "").trim();
+  const trimmedYear = String(sinceYear || "").trim();
+
+  if (trimmedYear) {
+    filters.push(`from_publication_date:${trimmedYear}-01-01`);
   }
+
   if (institutionId) {
-    filters.push(`institutions.id:${institutionId}`);
+    filters.push(`authorships.institutions.id:${institutionId}`);
   }
 
   const filterParam = filters.length ? `&filter=${filters.join(",")}` : "";
-  const searchParam = q ? `&search=${encodeURIComponent(q)}` : "";
+  const searchParam = trimmedQuery ? `&search=${encodeURIComponent(trimmedQuery)}` : "";
+  const url = `${BASE}/works?per_page=${perPage}&cursor=${encodeURIComponent(cursor)}${searchParam}${filterParam}${buildMailto(user)}`;
 
-  const url = `${BASE}/works?per_page=10&cursor=${cursor}${searchParam}${filterParam}${buildMailto(user)}`;
-
-  const res = await fetch(url);
-  const data = await res.json();
+  const data = await fetchJson(url, "Works search failed");
 
   return {
     papers: data.results ?? [],
@@ -65,13 +92,13 @@ export async function searchWorks(
   };
 }
 
-export async function getPaperById(paperId) {
-  const url = `${BASE}/works/${paperId}}`;
+export async function getPaperById(paperId, user) {
+  if (!paperId) return null;
 
-  const res = await fetch(url);
-  const data = await res.json();
+  const cleanedId = String(paperId).trim().replace(/}/g, "");
+  const url = `${BASE}/works/${cleanedId}${buildMailto(user).replace(/^&/, "?")}`;
 
-  return data
+  return await fetchJson(url, "Failed to fetch paper");
 }
 
 function shuffleArray(items) {
@@ -89,19 +116,21 @@ export async function getRecommendedWorksByTopics({
   perPage = 20,
   user,
 }) {
-  const cleanedTopicIds = [...new Set(
-    (topicIds || [])
-      .map((id) => Number(id))
-      .filter((id) => Number.isFinite(id) && id > 0)
-      .map((id) => `T${id}`)
-  )];
+  const cleanedTopicIds = [
+    ...new Set(
+      (topicIds || [])
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id) && id > 0)
+        .map((id) => `T${id}`)
+    ),
+  ];
 
   if (!cleanedTopicIds.length) {
     return [];
   }
 
   const searchParams = new URLSearchParams();
-  searchParams.set("per_page", "100"); // bigger pool
+  searchParams.set("per_page", "100");
   searchParams.set("filter", `topics.id:${cleanedTopicIds.join("|")}`);
 
   if (user?.email) {
@@ -109,15 +138,7 @@ export async function getRecommendedWorksByTopics({
   }
 
   const url = `${BASE}/works?${searchParams.toString()}`;
-  const res = await fetch(url);
-
-  if (!res.ok) {
-    const text = await res.text();
-    console.error("OpenAlex error:", text);
-    throw new Error("Failed to fetch recommended papers");
-  }
-
-  const data = await res.json();
+  const data = await fetchJson(url, "Failed to fetch recommended papers");
   const results = data.results ?? [];
 
   const excluded = new Set((excludeIds || []).map((id) => String(id)));

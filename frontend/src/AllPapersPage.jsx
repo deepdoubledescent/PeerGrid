@@ -1,8 +1,15 @@
-import { useEffect, useState } from "react";
-import { Search, X, Minus, Landmark, Calendar as CalendarIcon, MessageSquareText } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Search,
+  X,
+  Minus,
+  Landmark,
+  Calendar as CalendarIcon,
+  MessageSquareText,
+} from "lucide-react";
 import { searchInstitutions, searchWorks } from "./papersApi";
 import { toggleLikePaper, getPaperMetaBatch } from "./Controller";
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from "react-router-dom";
 
 const extractPaperTopics = (paper) => {
   return (paper?.topics || [])
@@ -13,19 +20,21 @@ const extractPaperTopics = (paper) => {
     .filter((topic) => Number.isFinite(topic.topic_id) && topic.score > 0);
 };
 
-/**
- * ListEntry is now a pure "Presentational" component.
- * It just displays what it's told via props.
- */
-const ListEntry = ({ paper, liked, likeCount, commentCount, onTogglePaperLike }) => {
-  const paper_id = paper.id.split("/").filter(Boolean).pop();
+const getPaperId = (paper) => paper?.id?.split("/").filter(Boolean).pop();
+
+const ListEntry = ({
+  paper,
+  liked,
+  likeCount,
+  commentCount,
+  onTogglePaperLike,
+  metaLoading,
+}) => {
+  const paperId = getPaperId(paper);
 
   return (
-    <div key={paper_id} className="card p-4 relative">
-      <a
-        href={`/papers/${paper_id}`}
-        className="font-medium text-lg hover:underline"
-      >
+    <div key={paperId} className="card p-4 relative">
+      <a href={`/papers/${paperId}`} className="font-medium text-lg hover:underline">
         {paper.title}
       </a>
 
@@ -53,19 +62,19 @@ const ListEntry = ({ paper, liked, likeCount, commentCount, onTogglePaperLike })
           type="button"
           className={`btn-outline px-5 py-2 ${liked ? "text-red-600" : ""}`}
           aria-label="Like paper"
-          onClick={() => onTogglePaperLike(paper_id, paper)}
+          onClick={() => onTogglePaperLike(paperId, paper)}
         >
-          {liked ? "♥" : "♡"} Like {likeCount ?? 0}
+          {liked ? "♥" : "♡"} Like {metaLoading ? "..." : (likeCount ?? 0)}
         </button>
 
         <div className="flex justify-end">
           <Link
-            to={`/papers/${paper_id}`}
+            to={`/papers/${paperId}`}
             state={{ paper_object: paper }}
             className="flex items-center gap-1 hover:bg-stone-200/50 p-3 pointer-cursor"
           >
             <MessageSquareText size={18} />
-            <span>{commentCount ?? "-"}</span>
+            <span>{metaLoading ? "..." : (commentCount ?? "-")}</span>
           </Link>
         </div>
       </section>
@@ -75,6 +84,7 @@ const ListEntry = ({ paper, liked, likeCount, commentCount, onTogglePaperLike })
 
 export default function AllPapersPage({ user }) {
   const navigate = useNavigate();
+
   const [query, setQuery] = useState("");
   const [sinceYear, setSinceYear] = useState("");
   const [institutionQuery, setInstitutionQuery] = useState("");
@@ -82,80 +92,115 @@ export default function AllPapersPage({ user }) {
   const [selectedInstitution, setSelectedInstitution] = useState(null);
   const [showInstituteSuggestions, setShowInstituteSuggestions] = useState(false);
   const [hasInstitutionSearchAttempt, setHasInstitutionSearchAttempt] = useState(false);
+  const [institutionLoading, setInstitutionLoading] = useState(false);
 
   const [papers, setPapers] = useState([]);
   const [cursor, setCursor] = useState("*");
   const [loading, setLoading] = useState(false);
+  const [metadataLoading, setMetadataLoading] = useState(false);
 
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const toggleAdvanced = () => setIsAdvancedOpen((p) => !p);
 
-  // Consolidated metadata state: { [id]: { liked: bool, likeCount: int, commentCount: int } }
   const [metaById, setMetaById] = useState({});
   const [status, setStatus] = useState({ type: "", message: "" });
+
+  // Track IDs currently being fetched so metadata calls are not duplicated
+  const metaFetchInFlightRef = useRef(new Set());
+
+  const normalizedInstitutionInput = useMemo(
+    () => String(institutionQuery || "").trim(),
+    [institutionQuery]
+  );
 
   // --- Institution search (typeahead) ---
   useEffect(() => {
     let cancelled = false;
 
     const loadInstitutions = async () => {
-      const value = String(institutionQuery || "").trim();
-
       if (!showInstituteSuggestions) return;
 
-      if (value.length < 2) {
+      if (normalizedInstitutionInput.length < 2) {
         setInstitutions([]);
         setHasInstitutionSearchAttempt(false);
+        setInstitutionLoading(false);
         return;
       }
 
+      setInstitutionLoading(true);
+
       try {
-        const res = await searchInstitutions(value, user);
+        const res = await searchInstitutions(normalizedInstitutionInput, user);
+
         if (!cancelled) {
           setInstitutions(res || []);
           setHasInstitutionSearchAttempt(true);
         }
       } catch (error) {
         console.error("Failed to fetch institution suggestions", error);
+
         if (!cancelled) {
           setInstitutions([]);
           setHasInstitutionSearchAttempt(true);
+          setStatus({
+            type: "error",
+            message: "Institution search failed. Please try again.",
+          });
+        }
+      } finally {
+        if (!cancelled) {
+          setInstitutionLoading(false);
         }
       }
     };
 
-    const t = setTimeout(loadInstitutions, 300);
+    const t = setTimeout(loadInstitutions, 250);
 
     return () => {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [institutionQuery, showInstituteSuggestions, user]);
+  }, [normalizedInstitutionInput, showInstituteSuggestions, user]);
 
   // --- Fetch papers ---
   const fetchPapers = async ({ reset = false } = {}) => {
+    if (loading) return;
+
     setLoading(true);
     setStatus({ type: "", message: "" });
 
     try {
-      const res = await searchWorks({
-        q: query,
-        sinceYear,
-        institutionId: selectedInstitution?.id,
-        cursor: reset ? "*" : cursor,
-        user,
-      });
+      const res = await searchWorks(
+        {
+          q: query.trim(),
+          sinceYear: String(sinceYear || "").trim(),
+          institutionId: selectedInstitution?.id || null,
+          cursor: reset ? "*" : cursor,
+        },
+        user
+      );
 
-      const incomingPapers = res?.papers ?? res?.results ?? [];
-      const next = res?.nextCursor ?? res?.meta?.next_cursor ?? null;
+      const incomingPapers = res?.papers ?? [];
+      const next = res?.nextCursor ?? null;
 
       if (reset) {
         setPapers(incomingPapers);
-        setMetaById({});
       } else {
-        setPapers((prev) => [...prev, ...incomingPapers]);
+        setPapers((prev) => {
+          const seen = new Set(prev.map((p) => getPaperId(p)));
+          const dedupedIncoming = incomingPapers.filter((p) => !seen.has(getPaperId(p)));
+          return [...prev, ...dedupedIncoming];
+        });
       }
+
       setCursor(next);
+
+      if (reset && incomingPapers.length === 0) {
+        setStatus({
+          type: "info",
+          message: "No papers found for your current search.",
+        });
+      }
     } catch (e) {
       console.error("searchWorks failed:", e);
       setStatus({
@@ -168,7 +213,6 @@ export default function AllPapersPage({ user }) {
   };
 
   const onSearch = () => {
-    if (loading) return;
     fetchPapers({ reset: true });
   };
 
@@ -180,9 +224,11 @@ export default function AllPapersPage({ user }) {
     setSelectedInstitution(null);
     setShowInstituteSuggestions(false);
     setHasInstitutionSearchAttempt(false);
+    setInstitutionLoading(false);
     setPapers([]);
     setCursor("*");
     setMetaById({});
+    metaFetchInFlightRef.current.clear();
     setStatus({ type: "", message: "" });
   };
 
@@ -191,40 +237,61 @@ export default function AllPapersPage({ user }) {
     setPapers([]);
     setCursor("*");
     setMetaById({});
+    metaFetchInFlightRef.current.clear();
+    setStatus({ type: "", message: "" });
   };
 
-  // --- BATCH FETCH EFFECT ---
-  // This watches the papers list. If new papers appear without meta, it fetches them.
+  // --- Batch metadata fetch for only missing papers ---
   useEffect(() => {
+    let cancelled = false;
+
     const syncMetadata = async () => {
       if (papers.length === 0) return;
 
       const idsToFetch = papers
-        .map((p) => p.id.split("/").filter(Boolean).pop())
-        .filter((id) => !metaById[id]);
+        .map((p) => getPaperId(p))
+        .filter(Boolean)
+        .filter(
+          (id) => !metaById[id] && !metaFetchInFlightRef.current.has(id)
+        );
 
       if (idsToFetch.length === 0) return;
 
+      idsToFetch.forEach((id) => metaFetchInFlightRef.current.add(id));
+      setMetadataLoading(true);
+
       try {
-        const { likeCounts, hasLiked, commentCounts } = await getPaperMetaBatch(idsToFetch);
+        const { likeCounts = [], hasLiked = [], commentCounts = [] } =
+          await getPaperMetaBatch(idsToFetch);
+
+        if (cancelled) return;
 
         const newMetaBatch = {};
         idsToFetch.forEach((id, index) => {
           newMetaBatch[id] = {
-            liked: hasLiked[index],
-            likeCount: likeCounts[index],
-            commentCount: commentCounts[index],
+            liked: hasLiked[index] ?? false,
+            likeCount: likeCounts[index] ?? 0,
+            commentCount: commentCounts[index] ?? 0,
           };
         });
 
         setMetaById((prev) => ({ ...prev, ...newMetaBatch }));
       } catch (err) {
         console.error("Failed to fetch batch metadata", err);
+      } finally {
+        idsToFetch.forEach((id) => metaFetchInFlightRef.current.delete(id));
+        if (!cancelled) {
+          setMetadataLoading(false);
+        }
       }
     };
 
     syncMetadata();
-  }, [papers, user]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [papers, metaById]);
 
   const onTogglePaperLike = async (workId, paper) => {
     setStatus({ type: "", message: "" });
@@ -234,18 +301,27 @@ export default function AllPapersPage({ user }) {
       return;
     }
 
-    await toggleLikePaper(workId, extractPaperTopics(paper));
+    try {
+      await toggleLikePaper(workId, extractPaperTopics(paper));
 
-    const { likeCounts, hasLiked, commentCounts } = await getPaperMetaBatch([workId]);
+      const { likeCounts = [], hasLiked = [], commentCounts = [] } =
+        await getPaperMetaBatch([workId]);
 
-    setMetaById((prev) => ({
-      ...prev,
-      [workId]: {
-        liked: hasLiked[0],
-        likeCount: likeCounts[0],
-        commentCount: commentCounts[0],
-      },
-    }));
+      setMetaById((prev) => ({
+        ...prev,
+        [workId]: {
+          liked: hasLiked[0] ?? false,
+          likeCount: likeCounts[0] ?? 0,
+          commentCount: commentCounts[0] ?? 0,
+        },
+      }));
+    } catch (error) {
+      console.error("Failed to toggle paper like", error);
+      setStatus({
+        type: "error",
+        message: "Could not update like status. Please try again.",
+      });
+    }
   };
 
   return (
@@ -255,7 +331,6 @@ export default function AllPapersPage({ user }) {
         Browse papers and filter them by year and institution.
       </p>
 
-      {/* Search Bar */}
       <div className="search-bar flex flex-row">
         <div className="group w-full flex items-center border-b-1 border-black transition-all duration-300 focus-within:border-stone-600">
           <div className="w-full flex relative">
@@ -269,33 +344,50 @@ export default function AllPapersPage({ user }) {
             />
             <div className="absolute right-0 py-2 text-stone-400">
               {query && (
-                <button onClick={clearSearch} className="hover:text-stone-900 transition-colors opacity-50 mr-2">
+                <button
+                  onClick={clearSearch}
+                  className="hover:text-stone-900 transition-colors opacity-50 mr-2"
+                  type="button"
+                >
                   <X size={24} strokeWidth={1.5} />
                 </button>
               )}
-              <button onClick={onSearch} className="hover:text-stone-900 transition-colors" disabled={loading}>
+              <button
+                onClick={onSearch}
+                className="hover:text-stone-900 transition-colors"
+                disabled={loading}
+                type="button"
+              >
                 <Search size={24} strokeWidth={1.5} />
               </button>
             </div>
           </div>
         </div>
 
-        {/* Toggle Area */}
         <div className="flex justify-center mt-2 relative z-10">
           <button
             onClick={toggleAdvanced}
             className="flex flex-col items-center group focus:outline-none"
             aria-expanded={isAdvancedOpen}
+            type="button"
           >
-            <div className={`p-2 rounded-full duration-500 ${isAdvancedOpen ? 'bg-stone-200' : 'hover:bg-stone-200/50'}`}>
+            <div
+              className={`p-2 rounded-full duration-500 ${
+                isAdvancedOpen ? "bg-stone-200" : "hover:bg-stone-200/50"
+              }`}
+            >
               <Minus
                 size={20}
-                className={`text-stone-600 transition-all ${isAdvancedOpen ? 'rotate-180' : ''}`}
+                className={`text-stone-600 transition-all ${
+                  isAdvancedOpen ? "rotate-180" : ""
+                }`}
                 strokeWidth={1.5}
               />
               <Minus
                 size={20}
-                className={`text-stone-600 transition-all -mt-[100%] ${isAdvancedOpen ? 'rotate-180' : 'rotate-90'}`}
+                className={`text-stone-600 transition-all -mt-[100%] ${
+                  isAdvancedOpen ? "rotate-180" : "rotate-90"
+                }`}
                 strokeWidth={1.5}
               />
             </div>
@@ -303,7 +395,6 @@ export default function AllPapersPage({ user }) {
         </div>
       </div>
 
-      {/* Advanced filters panel */}
       <div
         className={`relative z-30 mx-auto w-full max-w-4xl transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
           isAdvancedOpen ? "max-h-[650px] opacity-100 mt-6" : "max-h-0 opacity-0 mt-0"
@@ -347,7 +438,11 @@ export default function AllPapersPage({ user }) {
 
               {showInstituteSuggestions && !selectedInstitution && (
                 <ul className="absolute left-0 top-full w-full z-[60] bg-stone-50 border border-stone-200 mt-1 max-h-48 overflow-y-auto shadow-lg shadow-stone-200/50 rounded-sm custom-scrollbar">
-                  {institutions.length > 0 ? (
+                  {institutionLoading ? (
+                    <li className="px-3 py-2 text-stone-400 italic text-sm">
+                      Searching...
+                    </li>
+                  ) : institutions.length > 0 ? (
                     institutions.map((inst) => (
                       <li
                         key={inst.id}
@@ -389,16 +484,17 @@ export default function AllPapersPage({ user }) {
             onClick={onSearch}
             disabled={loading}
           >
-            Search
+            {loading ? "Searching..." : "Search"}
           </button>
         </div>
       </div>
 
-      {/* Results */}
       <div className="space-y-4 mt-10 divide-y divide-gray-200">
         {papers.map((p) => {
-          const id = p.id.split("/").filter(Boolean).pop();
+          const id = getPaperId(p);
           const meta = metaById[id] || {};
+          const metaLoading = !metaById[id] && metadataLoading;
+
           return (
             <ListEntry
               key={id}
@@ -406,13 +502,13 @@ export default function AllPapersPage({ user }) {
               liked={meta.liked}
               likeCount={meta.likeCount}
               commentCount={meta.commentCount}
+              metaLoading={metaLoading}
               onTogglePaperLike={onTogglePaperLike}
             />
           );
         })}
       </div>
 
-      {/* Load more */}
       {papers.length > 0 && cursor && (
         <div className="mt-8 text-center">
           <button
@@ -427,48 +523,55 @@ export default function AllPapersPage({ user }) {
       )}
 
       {status.message && (
-        <div className={`mt-4 text-center ${status.type === 'error' ? 'text-red-500' : 'text-green-600'}`}>
+        <div
+          className={`mt-4 text-center ${
+            status.type === "error"
+              ? "text-red-500"
+              : status.type === "info"
+              ? "text-stone-500"
+              : "text-green-600"
+          }`}
+        >
           {status.message}
         </div>
       )}
-      {/* Spacer so the fixed bottom bar does not cover content */}
-<div style={{ height: '100px' }}></div>
 
-{/* Fixed bottom bar */}
-<div
-  style={{
-    position: 'fixed',
-    bottom: 0,
-    left: 0,
-    width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderTop: '1px solid #e5e5e5',
-    backdropFilter: 'blur(5px)',
-    padding: '1.5rem 0',
-    display: 'flex',
-    justifyContent: 'center',
-    zIndex: 100,
-    boxShadow: '0 -4px 20px rgba(0,0,0,0.03)',
-  }}
->
-  <div
-    style={{
-      display: 'flex',
-      gap: '0.75rem',
-      alignItems: 'center',
-      flexWrap: 'wrap',
-      justifyContent: 'center',
-    }}
-  >
-    <button
-      className="btn-primary"
-      onClick={() => navigate("/papers/recommended")}
-      type="button"
-    >
-      Recommended Papers
-    </button>
-  </div>
-</div>
+      <div style={{ height: "100px" }}></div>
+
+      <div
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          width: "100%",
+          backgroundColor: "rgba(255, 255, 255, 0.95)",
+          borderTop: "1px solid #e5e5e5",
+          backdropFilter: "blur(5px)",
+          padding: "1.5rem 0",
+          display: "flex",
+          justifyContent: "center",
+          zIndex: 100,
+          boxShadow: "0 -4px 20px rgba(0,0,0,0.03)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            gap: "0.75rem",
+            alignItems: "center",
+            flexWrap: "wrap",
+            justifyContent: "center",
+          }}
+        >
+          <button
+            className="btn-primary"
+            onClick={() => navigate("/papers/recommended")}
+            type="button"
+          >
+            Recommended Papers
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

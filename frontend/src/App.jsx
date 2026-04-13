@@ -45,6 +45,8 @@ import EventDetailPage from "./EventDetailPage";
 import EditEventPage from "./EditEventPage";
 import UserEventsPage from "./UserEventsPage";
 import { validateSignOn } from './Controller';
+import TermsOfUse from './TermsOfUse';
+import PrivacyPolicy from './PrivacyPolicy';
 
 function useScrollThreshold(threshold = 50) {
   const [isPastThreshold, setIsPastThreshold] = useState(false);
@@ -423,6 +425,8 @@ function App() {
                     <Route path="/events/:eventId" element={<EventDetailPage user={user} />} />
                     <Route path="/events/:eventId/edit" element={<EditEventPage user={user} />} />
                     <Route path="/profile/:userId/events" element={<UserEventsPage user={user} />} />
+                    <Route path="/terms" element={<TermsOfUse />} />
+                    <Route path="/privacy" element={<PrivacyPolicy />} />
                   </Routes>
                 </Layout>
               //</RequireOpenAlexRoute>

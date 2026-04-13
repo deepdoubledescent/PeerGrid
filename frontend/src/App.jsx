@@ -45,6 +45,8 @@ import EventDetailPage from "./EventDetailPage";
 import EditEventPage from "./EditEventPage";
 import UserEventsPage from "./UserEventsPage";
 import { validateSignOn } from './Controller';
+import TermsOfUse from './TermsOfUse';
+import PrivacyPolicy from './PrivacyPolicy';
 import RecommendedPostsPage from "./RecommendedPostsPage";
 import RecommendedPapersPage from "./RecommendedPapersPage";
 import RecommendedProjectsPage from "./RecommendedProjectsPage";
@@ -429,6 +431,8 @@ function App() {
                     <Route path="/posts/recommended" element={<RecommendedPostsPage user={user} />} />
                     <Route path="/papers/recommended" element={<RecommendedPapersPage user={user} />} />
                     <Route path="/projects/recommended" element={<RecommendedProjectsPage user={user} />}/>
+                    <Route path="/terms" element={<TermsOfUse />} />
+                    <Route path="/privacy" element={<PrivacyPolicy />} />
                   </Routes>
                 </Layout>
               //</RequireOpenAlexRoute>

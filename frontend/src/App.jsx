@@ -425,6 +425,9 @@ function App() {
                     <Route path="/events/:eventId" element={<EventDetailPage user={user} />} />
                     <Route path="/events/:eventId/edit" element={<EditEventPage user={user} />} />
                     <Route path="/profile/:userId/events" element={<UserEventsPage user={user} />} />
+                    <Route path="/posts/recommended" element={<RecommendedPostsPage user={user} />} />
+                    <Route path="/papers/recommended" element={<RecommendedPapersPage user={user} />} />
+                    <Route path="/projects/recommended" element={<RecommendedProjectsPage user={user} />}/>
                     <Route path="/terms" element={<TermsOfUse />} />
                     <Route path="/privacy" element={<PrivacyPolicy />} />
                   </Routes>

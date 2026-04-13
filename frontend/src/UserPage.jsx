@@ -10,6 +10,7 @@ import {
     toggleLikePerson,
     getLocations,
     getInstitutes,
+    deleteUser
 } from './Controller';
 import imageCompression from 'browser-image-compression';
 import Cropper from 'react-easy-crop';
@@ -17,7 +18,7 @@ import { motion } from 'framer-motion';
 import {
     Building, MapPin, GraduationCap, User, BookOpen, Lightbulb,
     Mail, Contact, ChevronDown, Brain, Pencil, Camera, Star, Heart,
-    Users, Briefcase, CalendarDays, Languages, BadgeCheck, ShieldCheck
+    Users, Briefcase, CalendarDays, Languages, BadgeCheck, ShieldCheck, Trash2
 } from 'lucide-react';
 import './UserPage.css';
 
@@ -325,6 +326,7 @@ const UserPage = ({ user, setUser }) => {
     const [skillInput, setSkillInput] = useState("");
 
     const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [isDeletingProfile, setIsDeletingProfile] = useState(false);
 
     const [selectedLanguages, setSelectedLanguages] = useState([]);
     const [languageSuggestions, setLanguageSuggestions] = useState([]);
@@ -761,6 +763,33 @@ const UserPage = ({ user, setUser }) => {
             setShowInstituteSuggestions(false);
         } catch (e) {
             console.error("Failed to update profile:", e);
+        }
+    };
+
+    const handleDeleteProfile = async () => {
+        if (!isOwnProfile || isDeletingProfile) return;
+
+        const confirmed = window.confirm(
+            "Are you sure you want to permanently delete your profile? This action cannot be undone."
+        );
+
+        if (!confirmed) return;
+
+        setIsDeletingProfile(true);
+
+        try {
+            await deleteUser();
+
+            if (setUser) {
+                setUser(null);
+            }
+
+            navigate("/");
+        } catch (e) {
+            console.error("Failed to delete profile:", e);
+            alert("Failed to delete profile. Please try again.");
+        } finally {
+            setIsDeletingProfile(false);
         }
     };
 
@@ -1212,6 +1241,25 @@ const UserPage = ({ user, setUser }) => {
                                 <ShieldCheck size={18} />
                                 <span>Verify / Reset Account Info</span>
                             </Link>
+
+                            <button
+                                type="button"
+                                className="summary-item utility-link"
+                                onClick={handleDeleteProfile}
+                                disabled={isDeletingProfile}
+                                style={{
+                                    width: "100%",
+                                    border: "none",
+                                    background: "transparent",
+                                    cursor: isDeletingProfile ? "default" : "pointer",
+                                    color: "#dc2626",
+                                    opacity: isDeletingProfile ? 0.7 : 1,
+                                    textAlign: "left"
+                                }}
+                            >
+                                <Trash2 size={18} />
+                                <span>{isDeletingProfile ? "Deleting Profile..." : "Delete Profile"}</span>
+                            </button>
                         </div>
                     ) : null}
                 </aside>

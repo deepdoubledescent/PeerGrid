@@ -913,7 +913,18 @@ const createReport = async ({ reportedItemType, reportedItemId, reportNote }) =>
   }
 };
 
+const deleteUser = async () => {
+  try {
+    const result = await api.post('/user/deleteUser', {});
+    return result;
+  } catch (err) {
+    alert(err?.message || "Failed to delete profile.");
+    throw err;
+  }
+};
+
 export {
+  deleteUser,
   createReport,
   getRecommendedProjects,
   getTopTopicScores,

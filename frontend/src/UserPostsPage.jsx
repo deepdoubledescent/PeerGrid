@@ -274,6 +274,14 @@ export default function UserPostsPage({ user }) {
 
       <div className="flex flex-wrap justify-center gap-4 mt-10">
         <button
+            type="button"
+            className="btn-primary"
+            onClick={() => navigate("/posts/recommended")}
+            disabled={!user}
+          >
+            Recommended
+        </button>
+        <button
           type="button"
           className="btn-primary"
           onClick={() => navigate("/posts/feed")}

@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { Flag } from "lucide-react";
 import {
   getEvent,
   deleteEvent,
   registerForEvent,
   unregisterFromEvent,
-  hasUserRegisteredToEvent
+  hasUserRegisteredToEvent,
+  createReport,
 } from "./Controller";
+import ReportDialog from "./ReportDialog";
 
 export default function EventDetailPage({ user }) {
   const { eventId } = useParams();
@@ -18,6 +21,8 @@ export default function EventDetailPage({ user }) {
   const [registerState, setRegisterState] = useState("idle");
   const [registerError, setRegisterError] = useState("");
   const [isRegistered, setIsRegistered] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   useEffect(() => {
     const loadEvent = async () => {
@@ -118,6 +123,31 @@ export default function EventDetailPage({ user }) {
     } catch (err) {
       setRegisterState("error");
       setRegisterError(err?.message || "Failed to unregister.");
+    }
+  };
+
+  const handleSubmitEventReport = async (note) => {
+    if (!user) {
+      alert("Please login to submit a report.");
+      return;
+    }
+
+    try {
+      setIsSubmittingReport(true);
+
+      await createReport({
+        reportedItemType: "event",
+        reportedItemId: event.id,
+        reportNote: note,
+      });
+
+      alert("Report submitted. Thank you.");
+      setShowReportDialog(false);
+    } catch (err) {
+      console.error(err);
+      alert(err?.message || "Failed to submit report.");
+    } finally {
+      setIsSubmittingReport(false);
     }
   };
 
@@ -262,31 +292,57 @@ export default function EventDetailPage({ user }) {
 
       {!isOwner && !isCompleted && (
         <section className="mt-10">
-          {!isRegistered ? (
+          <div className="flex flex-wrap gap-3">
+            {!isRegistered ? (
+              <button
+                type="button"
+                className="btn-primary px-5 py-2"
+                onClick={onRegister}
+                disabled={registerState === "loading"}
+              >
+                {registerState === "loading" ? "Registering..." : "Register"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn-outline px-5 py-2"
+                onClick={onUnregister}
+                disabled={registerState === "loading"}
+              >
+                {registerState === "loading" ? "Updating..." : "Unregister"}
+              </button>
+            )}
+
             <button
               type="button"
-              className="btn-primary px-5 py-2"
-              onClick={onRegister}
-              disabled={registerState === "loading"}
+              className="btn-outline px-5 py-2 flex items-center"
+              onClick={() => {
+                if (!user) {
+                  alert("Please login to submit a report.");
+                  return;
+                }
+                setShowReportDialog(true);
+              }}
             >
-              {registerState === "loading" ? "Registering..." : "Register"}
+              <Flag size={14} />
+              <span className="ml-2">Report</span>
             </button>
-          ) : (
-            <button
-              type="button"
-              className="btn-outline px-5 py-2"
-              onClick={onUnregister}
-              disabled={registerState === "loading"}
-            >
-              {registerState === "loading" ? "Updating..." : "Unregister"}
-            </button>
-          )}
+          </div>
 
           {registerError && (
             <div className="mt-3 text-sm text-red-600">{registerError}</div>
           )}
         </section>
       )}
+
+      <ReportDialog
+        isOpen={showReportDialog}
+        onClose={() => setShowReportDialog(false)}
+        onSubmit={handleSubmitEventReport}
+        title="Report event"
+        subjectLabel="event"
+        loading={isSubmittingReport}
+      />
     </div>
   );
 }

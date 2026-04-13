@@ -425,9 +425,6 @@ export default function AllPostsPage({ user }) {
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <h1 className="text-3xl font-semibold mb-6">Search Posts</h1>
-      <p className="text-stone-500 mt-2">
-        Browse posts and filter them by topic.
-      </p>
 
       <div className="search-field flex-col">
         <div className="search-bar flex flex-row">
@@ -574,33 +571,43 @@ export default function AllPostsPage({ user }) {
           </button>
         </div>
 
-        {user && (
-          <div className="flex flex-wrap justify-center gap-4 mt-10">
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => navigate("/posts/feed")}
-            >
-              Open Feed
-            </button>
+        <div className="flex flex-wrap justify-center gap-4 mt-10">
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => navigate("/posts/recommended")}
+            disabled={!user}
+          >
+            Recommended
+          </button>
 
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => navigate(`/profile/${user?.id || user?.sub}/posts`)}
-            >
-              My Posts
-            </button>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => navigate("/posts/feed")}
+            disabled={!user}
+          >
+            Feed
+          </button>
+          
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => navigate(`/profile/${user?.id || user?.sub}/posts`)}
+            disabled={!user}
+          >
+            My Posts
+          </button>
 
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => navigate("/posts/new")}
-            >
-              + Create New Post
-            </button>
-          </div>
-        )}
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => navigate("/posts/new")}
+            disabled={!user}
+          >
+            + New Post
+          </button>
+        </div>
       </div>
     </div>
   );

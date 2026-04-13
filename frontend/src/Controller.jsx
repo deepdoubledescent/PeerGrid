@@ -346,10 +346,10 @@ const hasUserLikedPaper = async (paperId) => {
   }
 };
 
-// This one is not used as well. 
-const toggleLikePaper = async (paperId) => {
+
+const toggleLikePaper = async (paperId, topics = []) => {
   try {
-    const result = await api.post('/user/toggleLikePaper', { paperId });
+    const result = await api.post('/user/toggleLikePaper', { paperId, topics });
     return result
   } catch (err) {
     alert(err);
@@ -882,7 +882,41 @@ const getAllRequiredInformationForUserPage = async (userId) => {
   }
 };
 
+const getTopTopicScores = async (limit = 10) => {
+  try {
+    return await api.post('/user/getTopTopicScores', { limit });
+  } catch (err) {
+    alert(err);
+  }
+};
+
+const getRecommendedProjects = async (page = 1, results_per_page = 10) => {
+  try {
+    return await api.post('/project/getRecommendedProjects', { page, results_per_page });
+  } catch (err) {
+    alert(err);
+    throw err;
+  }
+};
+
+const createReport = async ({ reportedItemType, reportedItemId, reportNote }) => {
+  try {
+    const result = await api.post("/user/createReport", {
+      reportedItemType,
+      reportedItemId,
+      reportNote,
+    });
+    return result;
+  } catch (err) {
+    alert(err?.message || "Failed to submit report.");
+    throw err;
+  }
+};
+
 export {
+  createReport,
+  getRecommendedProjects,
+  getTopTopicScores,
   getAllRequiredInformationForUserPage,
   getPositionTitles,
   getPositionFields,

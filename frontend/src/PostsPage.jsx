@@ -9,29 +9,36 @@ export default function PostsPage({ user }) {
       description: "Find posts by selecting one or more topics.",
       label: "Search Posts",
       action: () => navigate("/posts/all"),
+      disabled: false,
     },
-    ...(user
-      ? [
-          {
-            title: "Your Feed",
-            description: "View posts from people you follow.",
-            label: "Open Feed",
-            action: () => navigate("/posts/feed"),
-          },
-          {
-            title: "My Posts",
-            description: "View and manage posts you have created.",
-            label: "Open My Posts",
-            action: () => navigate(`/profile/${user?.id || user?.sub}/posts`),
-          },
-          {
-            title: "New Post",
-            description: "Write and publish a new post.",
-            label: "+ Create New Post",
-            action: () => navigate("/posts/new"),
-          },
-        ]
-      : []),
+    {
+      title: "Recommended Posts",
+      description: "Discover posts with topics from posts you liked.",
+      label: "Open Recommendations",
+      action: () => navigate("/posts/recommended"),
+      disabled: !user,
+    },
+    {
+      title: "Your Feed",
+      description: "View posts from people you follow.",
+      label: "Open Feed",
+      action: () => navigate("/posts/feed"),
+      disabled: false,
+    },
+    {
+      title: "My Posts",
+      description: "View and manage posts you have created.",
+      label: "Open My Posts",
+      action: () => navigate(`/profile/${user?.id || user?.sub}/posts`),
+      disabled: !user,
+    },
+    {
+      title: "New Post",
+      description: "Write and publish a new post.",
+      label: "+ Create New Post",
+      action: () => navigate("/posts/new"),
+      disabled: !user,
+    },
   ];
 
   return (
@@ -40,7 +47,8 @@ export default function PostsPage({ user }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 auto-rows-fr">
         {cards.map((card, index) => {
-          const isOddLastCard = cards.length % 2 === 1 && index === cards.length - 1;
+          const isOddLastCard =
+            cards.length % 2 === 1 && index === cards.length - 1;
 
           return (
             <div
@@ -52,8 +60,15 @@ export default function PostsPage({ user }) {
               }`}
             >
               <h2 className="text-xl font-medium mb-2">{card.title}</h2>
-              <p className="text-sm opacity-70 mb-4 flex-1">{card.description}</p>
-              <button className="btn-primary mt-auto" onClick={card.action}>
+              <p className="text-sm opacity-70 mb-4 flex-1">
+                {card.description}
+              </p>
+              <button
+                className="btn-primary mt-auto w-full"
+                onClick={card.action}
+                disabled={card.disabled}
+                type="button"
+              >
                 {card.label}
               </button>
             </div>

@@ -47,6 +47,9 @@ import UserEventsPage from "./UserEventsPage";
 import { validateSignOn } from './Controller';
 import TermsOfUse from './TermsOfUse';
 import PrivacyPolicy from './PrivacyPolicy';
+import RecommendedPostsPage from "./RecommendedPostsPage";
+import RecommendedPapersPage from "./RecommendedPapersPage";
+import RecommendedProjectsPage from "./RecommendedProjectsPage";
 
 function useScrollThreshold(threshold = 50) {
   const [isPastThreshold, setIsPastThreshold] = useState(false);

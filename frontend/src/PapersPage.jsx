@@ -7,8 +7,8 @@ export default function PapersPage({ user }) {
     {
       title: "Recommended Papers",
       description: "Personalized recommendations tailored to your interests.",
-      label: "Coming Soon",
-      disabled: true,
+      label: "View Recommendations",
+      action: () => navigate("/papers/recommended"),
     },
     {
       title: "Search Papers",

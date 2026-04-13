@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, X, Minus, Landmark, MapPin } from "lucide-react";
+import { Search, X, Minus, Landmark, MapPin, Lightbulb, Brain } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   getPeople,
@@ -105,12 +105,116 @@ const PersonCard = ({ person, onToggleLike }) => {
   );
 };
 
+const TagSelectModal = ({
+  tagState,
+  tagList,
+  onTagToggle,
+  setModalState,
+  color,
+  title,
+}) => {
+  const [filterText, setFilterText] = useState("");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-stone-900/10 backdrop-blur-sm"
+        onClick={() => setModalState(false)}
+      ></div>
+
+      <div className="relative bg-stone-50 w-full max-w-lg max-h-[80vh] flex flex-col shadow-2xl border border-stone-200">
+        <div className="flex items-center justify-between p-6 pb-2 border-b border-stone-100">
+          <h3 className="font-sans uppercase tracking-widest text-xs font-bold text-stone-500">
+            {title}
+          </h3>
+          <button
+            onClick={() => setModalState(false)}
+            className="text-stone-400 hover:text-stone-900 transition-colors"
+            type="button"
+          >
+            <X size={20} strokeWidth={1.5} />
+          </button>
+        </div>
+
+        <div className="w-full flex relative">
+          <input
+            type="text"
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+            placeholder="Filter"
+            className="h-fit w-full border-b-1 border-black bg-transparent mb-5 py-1 mx-12 focus:outline-none placeholder-stone-400/50 text-stone-900 font-normal"
+          />
+          <div className="absolute right-12 py-1 text-stone-400">
+            {filterText && (
+              <button
+                onClick={() => setFilterText("")}
+                className="hover:text-stone-900 transition-colors opacity-50"
+                type="button"
+              >
+                <X size={24} strokeWidth={1.5} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap overflow-y-auto px-6 gap-y-2 custom-scrollbar">
+          {tagList
+            .filter((k) =>
+              k.toLowerCase().trim().includes(filterText.toLowerCase().trim())
+            )
+            .map((k) => {
+              const isSelected = tagState.has(k);
+
+              return (
+                <button
+                  key={k}
+                  className={`tag-ghost pointer-events-auto cursor-pointer ${
+                    isSelected
+                      ? color === "yellow"
+                        ? "!border-1 !border-[var(--yellow)]"
+                        : "!border-1 !border-[var(--green)]"
+                      : color === "yellow"
+                      ? "hover:border-1 hover:border-[var(--yellow)]"
+                      : "hover:border-1 hover:border-[var(--green)]"
+                  }`}
+                  onClick={() => onTagToggle(k)}
+                  type="button"
+                >
+                  {k}
+                </button>
+              );
+            })}
+        </div>
+
+        <div className="p-6 border-t border-stone-100 bg-stone-50 flex justify-end">
+          <button
+            onClick={() => setModalState(false)}
+            className="px-6 py-2 bg-stone-900 text-stone-50 font-sans text-xs uppercase tracking-widest hover:bg-stone-700 transition-colors"
+            type="button"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function AllPeoplePage({ user }) {
   const authUserId = user?.sub || user?.id || null;
 
   const [query, setQuery] = useState("");
   const [institution, setInstitution] = useState("");
   const [location, setLocation] = useState("");
+
+  const [selectedInterests, setSelectedInterests] = useState(new Set());
+  const [selectedSkills, setSelectedSkills] = useState(new Set());
+
+  const [interestOptions, setInterestOptions] = useState([]);
+  const [skillOptions, setSkillOptions] = useState([]);
+
+  const [isInterestsModalOpen, setIsInterestsModalOpen] = useState(false);
+  const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
 
   const [people, setPeople] = useState([]);
   const [totalResults, setTotalResults] = useState(0);
@@ -149,15 +253,29 @@ export default function AllPeoplePage({ user }) {
         q: query,
         institution,
         location,
+        interests: Array.from(selectedInterests),
+        skills: Array.from(selectedSkills),
         page: targetPage,
         results_per_page: resultsPerPage,
       };
 
       const result = await getPeople(filters);
+      const fetchedPeople = result?.people ?? [];
 
-      setPeople(result?.people ?? []);
+      setPeople(fetchedPeople);
       setTotalResults(result?.total_results ?? 0);
       setPage(result?.page ?? targetPage);
+
+      const allInterests = Array.from(
+        new Set(fetchedPeople.flatMap((person) => person.interests || []))
+      ).sort((a, b) => a.localeCompare(b));
+
+      const allSkills = Array.from(
+        new Set(fetchedPeople.flatMap((person) => person.skills || []))
+      ).sort((a, b) => a.localeCompare(b));
+
+      setInterestOptions(allInterests);
+      setSkillOptions(allSkills);
     } catch (err) {
       console.error("getPeople failed:", err);
       setStatus({
@@ -178,16 +296,55 @@ export default function AllPeoplePage({ user }) {
     setQuery("");
   };
 
-  const resetFilters = () => {
+  const resetFilters = async () => {
     setQuery("");
     setInstitution("");
     setLocation("");
-    setPeople([]);
-    setTotalResults(0);
-    setPage(1);
+    setSelectedInterests(new Set());
+    setSelectedSkills(new Set());
     setStatus({ type: "", message: "" });
     setShowInstituteSuggestions(false);
     setInstituteSuggestions([]);
+    setShowLocationSuggestions(false);
+    setLocationSuggestions([]);
+
+    setLoading(true);
+    try {
+      const result = await getPeople({
+        q: "",
+        institution: "",
+        location: "",
+        interests: [],
+        skills: [],
+        page: 1,
+        results_per_page: resultsPerPage,
+      });
+
+      const fetchedPeople = result?.people ?? [];
+
+      setPeople(fetchedPeople);
+      setTotalResults(result?.total_results ?? 0);
+      setPage(result?.page ?? 1);
+
+      const allInterests = Array.from(
+        new Set(fetchedPeople.flatMap((person) => person.interests || []))
+      ).sort((a, b) => a.localeCompare(b));
+
+      const allSkills = Array.from(
+        new Set(fetchedPeople.flatMap((person) => person.skills || []))
+      ).sort((a, b) => a.localeCompare(b));
+
+      setInterestOptions(allInterests);
+      setSkillOptions(allSkills);
+    } catch (err) {
+      console.error("reset getPeople failed:", err);
+      setStatus({
+        type: "error",
+        message: "Failed to reset filters.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const onToggleLike = async (likedUserSub) => {
@@ -235,10 +392,40 @@ export default function AllPeoplePage({ user }) {
     setShowInstituteSuggestions(false);
   };
 
+  const toggleInterest = (value) => {
+    setSelectedInterests((prev) => {
+      const next = new Set(prev);
+      if (next.has(value)) next.delete(value);
+      else next.add(value);
+      return next;
+    });
+  };
+
+  const toggleSkill = (value) => {
+    setSelectedSkills((prev) => {
+      const next = new Set(prev);
+      if (next.has(value)) next.delete(value);
+      else next.add(value);
+      return next;
+    });
+  };
+
   useEffect(() => {
     if (!authUserId) return;
     fetchPeople({ targetPage: 1 });
   }, [authUserId]);
+
+  useEffect(() => {
+    if (isInterestsModalOpen || isSkillsModalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isInterestsModalOpen, isSkillsModalOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -375,7 +562,7 @@ export default function AllPeoplePage({ user }) {
 
       <div
         className={`mx-auto w-full max-w-5xl transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          isAdvancedOpen ? "max-h-[800px] opacity-100 mt-6 overflow-visible" : "max-h-0 opacity-0 mt-0 overflow-hidden"
+          isAdvancedOpen ? "max-h-[900px] opacity-100 mt-6 overflow-visible" : "max-h-0 opacity-0 mt-0 overflow-hidden"
         }`}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 px-2">
@@ -465,6 +652,84 @@ export default function AllPeoplePage({ user }) {
                 </ul>
               )}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2 relative">
+            <label className="flex items-center gap-2 text-xs uppercase tracking-widest text-stone-500">
+              <Lightbulb size={14} /> Research Interests
+            </label>
+            <div className="flex flex-wrap gap-y-2">
+              {[...selectedInterests].map((interest) => (
+                <div key={interest} className="group relative">
+                  <div className="tag-ghost !border-1 !border-[var(--yellow)] cursor-default">
+                    {interest}
+                  </div>
+                  <button
+                    onClick={() => toggleInterest(interest)}
+                    className="absolute -right-1.5 -top-1.5 flex h-4 w-4 scale-0 border-1 border-[var(--border)] items-center justify-center rounded-full bg-white text-stone-500 shadow-md transition-all duration-200 hover:bg-red-600 group-hover:scale-100 active:scale-90"
+                    type="button"
+                  >
+                    <X size={14} strokeWidth={2} />
+                  </button>
+                </div>
+              ))}
+              <button
+                className="tag-ghost pointer-events-auto cursor-pointer"
+                onClick={() => setIsInterestsModalOpen(true)}
+                type="button"
+              >
+                + Add research interest
+              </button>
+            </div>
+            {isInterestsModalOpen && (
+              <TagSelectModal
+                tagState={selectedInterests}
+                tagList={interestOptions}
+                onTagToggle={toggleInterest}
+                setModalState={setIsInterestsModalOpen}
+                color="yellow"
+                title="Select Research Interests"
+              />
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2 relative">
+            <label className="flex items-center gap-2 text-xs uppercase tracking-widest text-stone-500">
+              <Brain size={14} /> Skills
+            </label>
+            <div className="flex flex-wrap gap-y-2">
+              {[...selectedSkills].map((skill) => (
+                <div key={skill} className="group relative">
+                  <div className="tag-ghost !border-1 !border-[var(--green)] cursor-default">
+                    {skill}
+                  </div>
+                  <button
+                    onClick={() => toggleSkill(skill)}
+                    className="absolute -right-1.5 -top-1.5 flex h-4 w-4 scale-0 border-1 border-[var(--border)] items-center justify-center rounded-full bg-white text-stone-500 shadow-md transition-all duration-200 hover:bg-red-600 group-hover:scale-100 active:scale-90"
+                    type="button"
+                  >
+                    <X size={14} strokeWidth={2} />
+                  </button>
+                </div>
+              ))}
+              <button
+                className="tag-ghost pointer-events-auto cursor-pointer"
+                onClick={() => setIsSkillsModalOpen(true)}
+                type="button"
+              >
+                + Add skill
+              </button>
+            </div>
+            {isSkillsModalOpen && (
+              <TagSelectModal
+                tagState={selectedSkills}
+                tagList={skillOptions}
+                onTagToggle={toggleSkill}
+                setModalState={setIsSkillsModalOpen}
+                color="green"
+                title="Select Skills"
+              />
+            )}
           </div>
         </div>
 

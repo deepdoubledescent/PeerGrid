@@ -6,7 +6,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css'; // Import CSS for math styling
 import { getProjectsPageData, getLocations, getInstitutes } from './Controller';
-import { ChevronDown, Minus, Search, X, Calendar, User, Tag, Landmark, Globe, Calendar as CalendarIcon, Hammer, Briefcase  } from 'lucide-react';
+import { ChevronDown, Minus, Search, X, Calendar, User, Lightbulb, Landmark, Globe, Calendar as CalendarIcon, Brain, Briefcase  } from 'lucide-react';
 import { MinimalCalendar, highlightMarkdownExcerpt, highlightText } from './utils';
 
 const ListEntry = ({ project, isOpen, onToggle, isKeywordInQuery, isKeywordSelected, onKeywordToggle, highlightWord="" }) => {
@@ -784,7 +784,7 @@ export const ProjectsList = ({ user }) => {
                     {/* Field 4: Topics */}
                     <div className="flex flex-col gap-2 row-2 col-1 col-span-2">
                         <label className="flex items-center gap-2 text-xs font-sans uppercase tracking-widest text-stone-500">
-                            <Tag size={14} /> Topics
+                            <Lightbulb size={14} /> Topics
                         </label>
                         <div className='flex flex-wrap pr-2 gap-y-2'>
                             {[...selectedKeywords].map((k) => {
@@ -814,7 +814,7 @@ export const ProjectsList = ({ user }) => {
                     {/* Field 5: Skills */}
                     <div className="flex flex-col gap-2 row-2 col-3 col-span-2">
                         <label className="flex items-center gap-2 text-xs font-sans uppercase tracking-widest text-stone-500">
-                            <Hammer size={14} /> Skills
+                            <Brain size={14} /> Skills
                         </label>
                         <div className='flex flex-wrap pr-2 gap-y-2'>
                             {[...selectedSkills].map((k) => {

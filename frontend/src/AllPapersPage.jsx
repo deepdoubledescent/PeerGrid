@@ -948,40 +948,42 @@ export default function AllPapersPage({ user }) {
 
       <div style={{ height: "100px" }}></div>
 
-      <div
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          width: "100%",
-          backgroundColor: "rgba(255, 255, 255, 0.95)",
-          borderTop: "1px solid #e5e5e5",
-          backdropFilter: "blur(5px)",
-          padding: "1.5rem 0",
-          display: "flex",
-          justifyContent: "center",
-          zIndex: 100,
-          boxShadow: "0 -4px 20px rgba(0,0,0,0.03)",
-        }}
-      >
+      {user && (
         <div
           style={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            width: "100%",
+            backgroundColor: "rgba(255, 255, 255, 0.95)",
+            borderTop: "1px solid #e5e5e5",
+            backdropFilter: "blur(5px)",
+            padding: "1.5rem 0",
             display: "flex",
-            gap: "0.75rem",
-            alignItems: "center",
-            flexWrap: "wrap",
             justifyContent: "center",
+            zIndex: 100,
+            boxShadow: "0 -4px 20px rgba(0,0,0,0.03)",
           }}
         >
-          <button
-            className="btn-primary"
-            onClick={() => navigate("/papers/recommended")}
-            type="button"
+          <div
+            style={{
+              display: "flex",
+              gap: "0.75rem",
+              alignItems: "center",
+              flexWrap: "wrap",
+              justifyContent: "center",
+            }}
           >
-            Recommended Papers
-          </button>
+            <button
+              className="btn-primary"
+              onClick={() => navigate("/papers/recommended")}
+              type="button"
+            >
+              Recommended Papers
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

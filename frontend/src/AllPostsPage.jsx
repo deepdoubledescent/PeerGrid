@@ -571,43 +571,41 @@ export default function AllPostsPage({ user }) {
           </button>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-4 mt-10">
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => navigate("/posts/recommended")}
-            disabled={!user}
-          >
-            Recommended
-          </button>
+        {user && (
+          <div className="flex flex-wrap justify-center gap-4 mt-10">
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => navigate("/posts/recommended")}
+            >
+              Recommended
+            </button>
 
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => navigate("/posts/feed")}
-            disabled={!user}
-          >
-            Feed
-          </button>
-          
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => navigate(`/profile/${user?.id || user?.sub}/posts`)}
-            disabled={!user}
-          >
-            My Posts
-          </button>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => navigate("/posts/feed")}
+            >
+              Feed
+            </button>
+            
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => navigate(`/profile/${user?.id || user?.sub}/posts`)}
+            >
+              My Posts
+            </button>
 
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => navigate("/posts/new")}
-            disabled={!user}
-          >
-            + New Post
-          </button>
-        </div>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => navigate("/posts/new")}
+            >
+              + New Post
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

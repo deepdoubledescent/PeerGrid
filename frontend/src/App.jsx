@@ -50,6 +50,7 @@ import PrivacyPolicy from './PrivacyPolicy';
 import RecommendedPostsPage from "./RecommendedPostsPage";
 import RecommendedPapersPage from "./RecommendedPapersPage";
 import RecommendedProjectsPage from "./RecommendedProjectsPage";
+import ReportPage from "./ReportPage";
 
 function useScrollThreshold(threshold = 50) {
   const [isPastThreshold, setIsPastThreshold] = useState(false);
@@ -120,6 +121,8 @@ const Layout = ({ children, user, setUser }) => {
               <Link to="/posts" className="nav-link">Posts</Link>
               <span className='m-7'>|</span>
               <Link to="/events" className="nav-link">Events</Link>
+              <span className='m-7'>|</span>
+              <Link to="/report" className="nav-link">Report</Link>
             </nav>
           </div>
           <div className="nav-right">
@@ -433,6 +436,7 @@ function App() {
                     <Route path="/projects/recommended" element={<RecommendedProjectsPage user={user} />}/>
                     <Route path="/terms" element={<TermsOfUse />} />
                     <Route path="/privacy" element={<PrivacyPolicy />} />
+                    <Route path="/report" element={<ReportPage user={user} />} />
                   </Routes>
                 </Layout>
               //</RequireOpenAlexRoute>

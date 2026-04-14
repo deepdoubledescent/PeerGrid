@@ -121,8 +121,8 @@ const Layout = ({ children, user, setUser }) => {
               <Link to="/posts" className="nav-link">Posts</Link>
               <span className='m-7'>|</span>
               <Link to="/events" className="nav-link">Events</Link>
-              <span className='m-7'>|</span>
-              <Link to="/report" className="nav-link">Report</Link>
+              {user && <span className='m-7'>|</span>}
+              {user && <Link to="/report" className="nav-link">Report</Link>}
             </nav>
           </div>
           <div className="nav-right">

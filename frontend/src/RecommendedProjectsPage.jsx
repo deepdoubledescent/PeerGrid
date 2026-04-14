@@ -277,6 +277,13 @@ export default function RecommendedProjectsPage({ user }) {
 
               <button
                 className="btn-primary"
+                onClick={() => navigate(`/profile/${user?.id || user?.sub}/projects`)}
+              >
+                My Projects
+              </button>
+              
+              <button
+                className="btn-primary"
                 onClick={() => navigate("/projects/my-applications")}
               >
                 My Applications

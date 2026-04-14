@@ -114,6 +114,36 @@ export default function UserProjectsPage({ user }) {
           ))}
         </div>
       )}
+      
+    <div className="flex justify-center gap-6 mt-8">
+      <button
+        className="btn-primary flex-shrink-0"
+        onClick={() => navigate("/projects/recommended")}
+      >
+        Recommended Projects
+      </button>
+
+      <button
+        className="btn-primary flex-shrink-0"
+        onClick={() => navigate("/projects/my-applications")}
+      >
+        My Applications
+      </button>
+
+      <button
+        className="btn-primary flex-shrink-0"
+        onClick={() => navigate("/projects")}
+      >
+        Browse Projects
+      </button>
+
+      <button
+        className="btn-primary flex-shrink-0"
+        onClick={() => navigate("/projects/new")}
+      >
+        + Register New Project
+      </button>
+    </div>
     </div>
   );
 }

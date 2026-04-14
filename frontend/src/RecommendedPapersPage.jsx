@@ -334,19 +334,6 @@ export default function RecommendedPapersPage({ user }) {
           >
             Browse Papers
           </button>
-
-          <button
-            className="btn-primary"
-            onClick={handleLoadMore}
-            disabled={isLoadingMore || !hasMore}
-            type="button"
-          >
-            {isLoadingMore
-              ? "Loading..."
-              : hasMore
-              ? "Load More Papers"
-              : "No More Papers"}
-          </button>
         </div>
       </div>
     </div>

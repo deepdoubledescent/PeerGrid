@@ -22,7 +22,6 @@ function normalizeInstitutionResult(inst) {
 
   if (!rawId || !displayName) return null;
 
-  // Normalize autocomplete IDs like "https://openalex.org/I123..."
   let normalizedId = rawId;
   if (typeof rawId === "string" && rawId.includes("openalex.org/")) {
     normalizedId = rawId;
@@ -34,13 +33,49 @@ function normalizeInstitutionResult(inst) {
   };
 }
 
+function normalizeWorkTypeId(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  const match = raw.match(/types\/([^/?#]+)$/i);
+  if (match) return match[1];
+
+  return raw.toLowerCase();
+}
+
+function normalizeTopicId(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  const match = raw.match(/(T\d+)$/i);
+  if (match) return match[1].toUpperCase();
+
+  return raw;
+}
+
+function normalizeSubtopicId(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  const urlMatch = raw.match(/subfields\/(\d+)$/i);
+  if (urlMatch) return urlMatch[1];
+
+  const numberMatch = raw.match(/(\d+)$/);
+  if (numberMatch) return numberMatch[1];
+
+  return raw;
+}
+
 export async function getWorkById(workId, user) {
   if (!workId) return null;
 
   const s = String(workId).trim();
 
   if (s.startsWith("https://api.openalex.org/works/")) {
-    return await fetchJson(`${s}${user?.email ? `?mailto=${encodeURIComponent(user.email)}` : ""}`, "Failed to fetch work");
+    return await fetchJson(
+      `${s}${user?.email ? `?mailto=${encodeURIComponent(user.email)}` : ""}`,
+      "Failed to fetch work"
+    );
   }
 
   const match = s.match(/W\d+/);
@@ -64,7 +99,17 @@ export async function searchInstitutions(query, user) {
 }
 
 export async function searchWorks(
-  { q, sinceYear, institutionId, cursor = "*", perPage = 10 } = {},
+  {
+    q,
+    sinceYear,
+    institutionId,
+    workType,
+    topicId,
+    topicIds,
+    subtopicIds,
+    cursor = "*",
+    perPage = 10,
+  } = {},
   user
 ) {
   const filters = [];
@@ -78,6 +123,32 @@ export async function searchWorks(
 
   if (institutionId) {
     filters.push(`authorships.institutions.id:${institutionId}`);
+  }
+
+  const normalizedWorkType = normalizeWorkTypeId(workType);
+  if (normalizedWorkType) {
+    filters.push(`type:${normalizedWorkType}`);
+  }
+
+  const normalizedTopicIds = [
+    ...new Set((topicIds || []).map(normalizeTopicId).filter(Boolean)),
+  ];
+
+  const normalizedSingleTopicId =
+    normalizedTopicIds.length === 0 ? normalizeTopicId(topicId) : null;
+
+  if (normalizedTopicIds.length > 0) {
+    filters.push(`primary_topic.id:${normalizedTopicIds.join("|")}`);
+  } else if (normalizedSingleTopicId) {
+    filters.push(`primary_topic.id:${normalizedSingleTopicId}`);
+  }
+
+  const normalizedSubtopicIds = [
+    ...new Set((subtopicIds || []).map(normalizeSubtopicId).filter(Boolean)),
+  ];
+
+  if (normalizedSubtopicIds.length > 0) {
+    filters.push(`primary_topic.subfield.id:${normalizedSubtopicIds.join("|")}`);
   }
 
   const filterParam = filters.length ? `&filter=${filters.join(",")}` : "";

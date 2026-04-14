@@ -6,9 +6,19 @@ import {
   Landmark,
   Calendar as CalendarIcon,
   MessageSquareText,
+  BookOpen,
+  Tags,
+  Network,
 } from "lucide-react";
 import { searchInstitutions, searchWorks } from "./papersApi";
-import { toggleLikePaper, getPaperMetaBatch } from "./Controller";
+import {
+  toggleLikePaper,
+  getPaperMetaBatch,
+  getPaperWorkTypes,
+  getPaperSubtopics,
+  getPaperTopics,
+  getPaperTopicSiblings,
+} from "./Controller";
 import { Link, useNavigate } from "react-router-dom";
 
 const extractPaperTopics = (paper) => {
@@ -45,6 +55,18 @@ const ListEntry = ({
           .map((a) => a.author.display_name)
           .join(", ")}
       </div>
+
+      {paper.primary_topic?.display_name && (
+        <div className="text-sm text-stone-600 mt-2">
+          Primary topic: {paper.primary_topic.display_name}
+        </div>
+      )}
+
+      {paper.type && (
+        <div className="text-sm text-stone-500 mt-1">
+          Type: {paper.type}
+        </div>
+      )}
 
       {paper.open_access?.oa_url && (
         <a
@@ -87,12 +109,31 @@ export default function AllPapersPage({ user }) {
 
   const [query, setQuery] = useState("");
   const [sinceYear, setSinceYear] = useState("");
+
   const [institutionQuery, setInstitutionQuery] = useState("");
   const [institutions, setInstitutions] = useState([]);
   const [selectedInstitution, setSelectedInstitution] = useState(null);
   const [showInstituteSuggestions, setShowInstituteSuggestions] = useState(false);
   const [hasInstitutionSearchAttempt, setHasInstitutionSearchAttempt] = useState(false);
   const [institutionLoading, setInstitutionLoading] = useState(false);
+
+  const [workTypes, setWorkTypes] = useState([]);
+  const [workTypesLoading, setWorkTypesLoading] = useState(false);
+  const [selectedWorkType, setSelectedWorkType] = useState("");
+
+  const [subtopicQuery, setSubtopicQuery] = useState("");
+  const [subtopicOptions, setSubtopicOptions] = useState([]);
+  const [selectedSubtopics, setSelectedSubtopics] = useState([]);
+  const [showSubtopicSuggestions, setShowSubtopicSuggestions] = useState(false);
+  const [subtopicLoading, setSubtopicLoading] = useState(false);
+
+  const [topicQuery, setTopicQuery] = useState("");
+  const [topicOptions, setTopicOptions] = useState([]);
+  const [selectedTopic, setSelectedTopic] = useState(null);
+  const [showTopicSuggestions, setShowTopicSuggestions] = useState(false);
+  const [topicLoading, setTopicLoading] = useState(false);
+
+  const [includeSiblingTopics, setIncludeSiblingTopics] = useState(false);
 
   const [papers, setPapers] = useState([]);
   const [cursor, setCursor] = useState("*");
@@ -105,7 +146,6 @@ export default function AllPapersPage({ user }) {
   const [metaById, setMetaById] = useState({});
   const [status, setStatus] = useState({ type: "", message: "" });
 
-  // Track IDs currently being fetched so metadata calls are not duplicated
   const metaFetchInFlightRef = useRef(new Set());
 
   const normalizedInstitutionInput = useMemo(
@@ -113,7 +153,67 @@ export default function AllPapersPage({ user }) {
     [institutionQuery]
   );
 
-  // --- Institution search (typeahead) ---
+  const normalizedSubtopicInput = useMemo(
+    () => String(subtopicQuery || "").trim(),
+    [subtopicQuery]
+  );
+
+  const normalizedTopicInput = useMemo(
+    () => String(topicQuery || "").trim(),
+    [topicQuery]
+  );
+
+  const topicLookupSubtopicId = useMemo(() => {
+    return selectedSubtopics.length === 1 ? selectedSubtopics[0].id : null;
+  }, [selectedSubtopics]);
+
+  const isSubtopicSelected = (id) => {
+    return selectedSubtopics.some((item) => item.id === id);
+  };
+
+  const toggleSubtopic = (item) => {
+    setSelectedSubtopics((prev) => {
+      const exists = prev.some((s) => s.id === item.id);
+      if (exists) {
+        return prev.filter((s) => s.id !== item.id);
+      }
+      return [...prev, item];
+    });
+  };
+
+  const removeSubtopic = (id) => {
+    setSelectedSubtopics((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadWorkTypes = async () => {
+      setWorkTypesLoading(true);
+      try {
+        const rows = await getPaperWorkTypes();
+        if (!cancelled) {
+          setWorkTypes(rows || []);
+        }
+      } catch (error) {
+        console.error("Failed to load work types", error);
+        if (!cancelled) {
+          setWorkTypes([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setWorkTypesLoading(false);
+        }
+      }
+    };
+
+    loadWorkTypes();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -162,7 +262,105 @@ export default function AllPapersPage({ user }) {
     };
   }, [normalizedInstitutionInput, showInstituteSuggestions, user]);
 
-  // --- Fetch papers ---
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSubtopics = async () => {
+      if (!showSubtopicSuggestions) return;
+
+      setSubtopicLoading(true);
+
+      try {
+        const rows = await getPaperSubtopics(
+          normalizedSubtopicInput,
+          selectedTopic?.id || null
+        );
+        if (!cancelled) {
+          setSubtopicOptions(rows || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch subtopics", error);
+        if (!cancelled) {
+          setSubtopicOptions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setSubtopicLoading(false);
+        }
+      }
+    };
+
+    const t = setTimeout(loadSubtopics, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [normalizedSubtopicInput, showSubtopicSuggestions, selectedTopic]);
+
+    useEffect(() => {
+    let cancelled = false;
+
+    const enforceSubtopicsForSelectedTopic = async () => {
+      if (!selectedTopic?.id) return;
+
+      try {
+        const allowedRows = await getPaperSubtopics("", selectedTopic.id);
+        if (cancelled) return;
+
+        const allowedIds = new Set((allowedRows || []).map((row) => row.id));
+
+        setSelectedSubtopics((prev) =>
+          prev.filter((item) => allowedIds.has(item.id))
+        );
+      } catch (error) {
+        console.error("Failed to enforce topic/subtopic consistency", error);
+      }
+    };
+
+    enforceSubtopicsForSelectedTopic();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTopic]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadTopics = async () => {
+      if (!showTopicSuggestions) return;
+
+      setTopicLoading(true);
+
+      try {
+        const rows = await getPaperTopics(
+          topicLookupSubtopicId,
+          normalizedTopicInput
+        );
+        if (!cancelled) {
+          setTopicOptions(rows || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch topics", error);
+        if (!cancelled) {
+          setTopicOptions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setTopicLoading(false);
+        }
+      }
+    };
+
+    const t = setTimeout(loadTopics, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [normalizedTopicInput, topicLookupSubtopicId, showTopicSuggestions]);
+
   const fetchPapers = async ({ reset = false } = {}) => {
     if (loading) return;
 
@@ -170,11 +368,31 @@ export default function AllPapersPage({ user }) {
     setStatus({ type: "", message: "" });
 
     try {
+      let expandedTopicIds = null;
+
+      if (selectedTopic?.id) {
+        if (includeSiblingTopics) {
+          const siblingRows = await getPaperTopicSiblings(selectedTopic.id);
+          expandedTopicIds = Array.from(
+            new Set([
+              selectedTopic.id,
+              ...(siblingRows || []).map((row) => row.id).filter(Boolean),
+            ])
+          );
+        } else {
+          expandedTopicIds = [selectedTopic.id];
+        }
+      }
+
       const res = await searchWorks(
         {
           q: query.trim(),
           sinceYear: String(sinceYear || "").trim(),
           institutionId: selectedInstitution?.id || null,
+          workType: selectedWorkType || null,
+          topicId: !expandedTopicIds?.length ? selectedTopic?.id || null : null,
+          topicIds: expandedTopicIds,
+          subtopicIds: selectedSubtopics.map((item) => item.id),
           cursor: reset ? "*" : cursor,
         },
         user
@@ -219,12 +437,30 @@ export default function AllPapersPage({ user }) {
   const resetFilters = () => {
     setQuery("");
     setSinceYear("");
+
     setInstitutionQuery("");
     setInstitutions([]);
     setSelectedInstitution(null);
     setShowInstituteSuggestions(false);
     setHasInstitutionSearchAttempt(false);
     setInstitutionLoading(false);
+
+    setSelectedWorkType("");
+
+    setSubtopicQuery("");
+    setSubtopicOptions([]);
+    setSelectedSubtopics([]);
+    setShowSubtopicSuggestions(false);
+    setSubtopicLoading(false);
+
+    setTopicQuery("");
+    setTopicOptions([]);
+    setSelectedTopic(null);
+    setShowTopicSuggestions(false);
+    setTopicLoading(false);
+
+    setIncludeSiblingTopics(false);
+
     setPapers([]);
     setCursor("*");
     setMetaById({});
@@ -241,7 +477,6 @@ export default function AllPapersPage({ user }) {
     setStatus({ type: "", message: "" });
   };
 
-  // --- Batch metadata fetch for only missing papers ---
   useEffect(() => {
     let cancelled = false;
 
@@ -328,7 +563,7 @@ export default function AllPapersPage({ user }) {
     <div className="p-8 max-w-6xl mx-auto">
       <h1 className="text-3xl font-semibold mb-6">Search Papers</h1>
       <p className="text-stone-500 mt-2">
-        Browse papers and filter them by year and institution.
+        Browse papers and filter them by year, institution, type, and topic.
       </p>
 
       <div className="search-bar flex flex-row">
@@ -396,22 +631,162 @@ export default function AllPapersPage({ user }) {
       </div>
 
       <div
-        className={`relative z-30 mx-auto w-full max-w-4xl transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          isAdvancedOpen ? "max-h-[650px] opacity-100 mt-6" : "max-h-0 opacity-0 mt-0"
+        className={`relative z-30 mx-auto w-full max-w-5xl transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          isAdvancedOpen ? "max-h-[1100px] opacity-100 mt-6" : "max-h-0 opacity-0 mt-0"
         }`}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 px-2">
-          <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-6 px-2">
+          <div className="flex flex-col gap-2 relative">
             <label className="flex items-center gap-2 text-xs uppercase tracking-widest text-stone-500">
-              <CalendarIcon size={14} /> Since year
+              <BookOpen size={14} /> Topic
             </label>
-            <input
-              type="number"
-              placeholder="YYYY"
-              value={sinceYear}
-              onChange={(e) => setSinceYear(e.target.value)}
-              className="bg-transparent border-b border-stone-300 py-1 text-lg focus:outline-none focus:border-stone-800 transition-colors"
-            />
+
+            <div className="relative">
+              <input
+                type="text"
+                placeholder={topicLookupSubtopicId ? "Topic in selected subtopic" : "Topic"}
+                value={selectedTopic?.label || topicQuery}
+                onChange={(e) => {
+                  setSelectedTopic(null);
+                  setTopicQuery(e.target.value);
+                  setShowTopicSuggestions(true);
+                }}
+                onFocus={() => setShowTopicSuggestions(true)}
+                onBlur={() => {
+                  setTimeout(() => setShowTopicSuggestions(false), 150);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && onSearch()}
+                className="w-full bg-transparent border-b border-stone-300 py-1 text-lg focus:outline-none focus:border-stone-800 transition-colors"
+              />
+
+              {showTopicSuggestions && !selectedTopic && (
+                <ul className="absolute left-0 top-full w-full z-[60] bg-stone-50 border border-stone-200 mt-1 max-h-48 overflow-y-auto shadow-lg shadow-stone-200/50 rounded-sm custom-scrollbar">
+                  {topicLoading ? (
+                    <li className="px-3 py-2 text-stone-400 italic text-sm">
+                      Searching...
+                    </li>
+                  ) : topicOptions.length > 0 ? (
+                    topicOptions.map((item) => (
+                      <li
+                        key={item.id}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setSelectedTopic(item);
+                          setTopicQuery(item.label);
+                          setTopicOptions([]);
+                          setShowTopicSuggestions(false);
+                        }}
+                        className="px-3 py-2 hover:bg-stone-200 cursor-pointer text-stone-700 text-lg transition-colors border-b border-stone-100 last:border-0"
+                      >
+                        {item.label}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="px-3 py-2 text-stone-400 italic text-sm">
+                      No matches found
+                    </li>
+                  )}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 relative">
+            <label className="flex items-center gap-2 text-xs uppercase tracking-widest text-stone-500">
+              <Tags size={14} /> Subtopics
+            </label>
+
+            {!!selectedSubtopics.length && (
+              <div className="flex flex-wrap gap-2">
+                {selectedSubtopics.map((item) => (
+                  <div
+                    key={item.id}
+                    className="tag-ghost !border-1 !border-[var(--yellow)] flex items-center gap-2"
+                  >
+                    <span>{item.label}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeSubtopic(item.id)}
+                      className="text-stone-500 hover:text-stone-900"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="relative">
+              <input
+                type="text"
+                placeholder={
+                  selectedTopic
+                    ? "Add subtopics from selected topic"
+                    : "Add subtopics"
+                }
+                value={subtopicQuery}
+                onChange={(e) => {
+                  setSubtopicQuery(e.target.value);
+                  setShowSubtopicSuggestions(true);
+                }}
+                onFocus={() => setShowSubtopicSuggestions(true)}
+                onBlur={() => {
+                  setTimeout(() => setShowSubtopicSuggestions(false), 150);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && onSearch()}
+                className="w-full bg-transparent border-b border-stone-300 py-1 text-lg focus:outline-none focus:border-stone-800 transition-colors"
+              />
+
+              {showSubtopicSuggestions && (
+                <ul className="absolute left-0 top-full w-full z-[60] bg-stone-50 border border-stone-200 mt-1 max-h-48 overflow-y-auto shadow-lg shadow-stone-200/50 rounded-sm custom-scrollbar">
+                  {subtopicLoading ? (
+                    <li className="px-3 py-2 text-stone-400 italic text-sm">
+                      Searching...
+                    </li>
+                  ) : subtopicOptions.length > 0 ? (
+                    subtopicOptions.map((item) => (
+                      <li
+                        key={item.id}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          toggleSubtopic(item);
+                          setSubtopicQuery("");
+                          setShowSubtopicSuggestions(false);
+                        }}
+                        className={`px-3 py-2 cursor-pointer text-stone-700 text-lg transition-colors border-b border-stone-100 last:border-0 ${
+                          isSubtopicSelected(item.id)
+                            ? "bg-stone-200"
+                            : "hover:bg-stone-200"
+                        }`}
+                      >
+                        {item.label}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="px-3 py-2 text-stone-400 italic text-sm">
+                      {selectedTopic
+                        ? "No subtopics available for the selected topic"
+                        : "No matches found"}
+                    </li>
+                  )}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 justify-end">
+            <label className="flex items-center gap-2 text-xs uppercase tracking-widest text-stone-500">
+              <Network size={14} /> Topic expansion
+            </label>
+            <label className="flex items-center gap-2 text-sm text-stone-600">
+              <input
+                type="checkbox"
+                checked={includeSiblingTopics}
+                onChange={(e) => setIncludeSiblingTopics(e.target.checked)}
+                disabled={!selectedTopic}
+              />
+              Include related topics
+            </label>
           </div>
 
           <div className="flex flex-col gap-2 relative">
@@ -433,6 +808,7 @@ export default function AllPapersPage({ user }) {
                 onBlur={() => {
                   setTimeout(() => setShowInstituteSuggestions(false), 150);
                 }}
+                onKeyDown={(e) => e.key === "Enter" && onSearch()}
                 className="w-full bg-transparent border-b border-stone-300 py-1 text-lg focus:outline-none focus:border-stone-800 transition-colors placeholder-stone-300"
               />
 
@@ -467,6 +843,40 @@ export default function AllPapersPage({ user }) {
                 </ul>
               )}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2 text-xs uppercase tracking-widest text-stone-500">
+              <CalendarIcon size={14} /> Since year
+            </label>
+            <input
+              type="number"
+              placeholder="YYYY"
+              value={sinceYear}
+              onChange={(e) => setSinceYear(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && onSearch()}
+              className="bg-transparent border-b border-stone-300 py-1 text-lg focus:outline-none focus:border-stone-800 transition-colors"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2 text-xs uppercase tracking-widest text-stone-500">
+              <BookOpen size={14} /> Work type
+            </label>
+            <select
+              value={selectedWorkType}
+              onChange={(e) => setSelectedWorkType(e.target.value)}
+              className="bg-transparent border-b border-stone-300 py-1 text-lg focus:outline-none focus:border-stone-800 transition-colors"
+            >
+              <option value="">
+                {workTypesLoading ? "Loading..." : "Any type"}
+              </option>
+              {workTypes.map((wt) => (
+                <option key={wt.id} value={wt.id}>
+                  {wt.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

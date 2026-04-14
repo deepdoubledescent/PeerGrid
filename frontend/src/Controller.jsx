@@ -923,7 +923,43 @@ const deleteUser = async () => {
   }
 };
 
+const getPaperWorkTypes = async () => {
+  try {
+    return await api.post('/paper/getWorkTypes', {});
+  } catch (err) {
+    alert(err);
+  }
+};
+
+const getPaperSubtopics = async (query = '', topicId = null) => {
+  try {
+    return await api.post('/paper/getSubtopics', { query, topicId });
+  } catch (err) {
+    alert(err);
+  }
+};
+
+const getPaperTopics = async (subtopicId = null, query = '') => {
+  try {
+    return await api.post('/paper/getTopics', { subtopicId, query });
+  } catch (err) {
+    alert(err);
+  }
+};
+
+const getPaperTopicSiblings = async (topicId) => {
+  try {
+    return await api.post('/paper/getTopicSiblings', { topicId });
+  } catch (err) {
+    alert(err);
+  }
+};
+
 export {
+  getPaperWorkTypes,
+  getPaperSubtopics,
+  getPaperTopics,
+  getPaperTopicSiblings,
   deleteUser,
   createReport,
   getRecommendedProjects,

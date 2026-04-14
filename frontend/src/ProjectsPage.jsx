@@ -191,6 +191,13 @@ export default function ProjectsPage({ user }) {
                 action: () => navigate("/projects/recommended"),
             },
             {
+                title: "My Projects",
+                description: "View and manage projects you have created.",
+                label: "Open My Projects",
+                action: () => navigate(`/profile/${user?.id || user?.sub}/projects`),
+                disabled: !user,
+            },
+            {
                 title: "My Applications",
                 description: "Track the projects you have applied.",
                 label: "View Applications",
@@ -996,6 +1003,12 @@ export const ProjectsList = ({ user }) => {
                 onClick={() => navigate("/projects/recommended")}
               >
                 Recommended Projects
+            </button>
+            <button
+                className="btn-primary"
+                onClick={() => navigate(`/profile/${user?.id || user?.sub}/projects`)}
+            >
+                My Projects
             </button>
             <button
                 className="btn-primary"

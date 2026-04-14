@@ -954,6 +954,12 @@ const MyProjectApplications = ({ user }) => {
                 </button>
                 <button
                     className="btn-primary"
+                    onClick={() => navigate(`/profile/${user?.id || user?.sub}/projects`)}
+                >
+                    My Projects
+                </button>
+                <button
+                    className="btn-primary"
                     onClick={() => navigate("/projects")}
                 >
                     Browse Projects

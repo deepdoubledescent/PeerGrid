@@ -294,3 +294,19 @@ h3 {
 .legal-section li {
   margin-bottom: 0.5rem;
 }
+
+.auth-guest-btn {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-decoration: underline;
+  margin-top: 0.5rem;
+}
+
+.auth-guest-btn:hover {
+  color: var(--text-primary);
+}

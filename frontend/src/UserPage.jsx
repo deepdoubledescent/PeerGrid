@@ -327,6 +327,7 @@ const UserPage = ({ user, setUser }) => {
 
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [isDeletingProfile, setIsDeletingProfile] = useState(false);
+    const [profileError, setProfileError] = useState("");
 
     const [selectedLanguages, setSelectedLanguages] = useState([]);
     const [languageSuggestions, setLanguageSuggestions] = useState([]);
@@ -399,6 +400,7 @@ const UserPage = ({ user, setUser }) => {
             links: nextUser?.links || [],
         });
 
+        setProfileError("");
         setIsEditingProfile(false);
         setShowLocationSuggestions(false);
         setLocationSuggestions([]);
@@ -732,6 +734,30 @@ const UserPage = ({ user, setUser }) => {
     const handleSaveProfile = async () => {
         if (!viewedUser?.id) return;
 
+        setProfileError("");
+
+        const positionTitle = String(profileDraft.positionTitle || "").trim();
+        const positionField = String(profileDraft.positionField || "").trim();
+        const degree = String(profileDraft.degree || "").trim();
+        const field = String(profileDraft.field || "").trim();
+
+        const hasPositionTitle = Boolean(positionTitle);
+        const hasPositionField = Boolean(positionField);
+        const hasDegree = Boolean(degree);
+        const hasField = Boolean(field);
+
+
+        if (hasPositionField && !hasPositionTitle) {
+            setProfileError("Please add a Job Title before entering a Job Field.");
+            return;
+        }
+
+
+        if ((hasDegree || hasField) && !(hasDegree && hasField)) {
+            setProfileError("Please fill in both Education Level and Field of Study.");
+            return;
+        }
+
         const parsedLocation = parseLocationLabel(profileDraft.location);
 
         try {
@@ -741,10 +767,10 @@ const UserPage = ({ user, setUser }) => {
                     institute: profileDraft.institute.trim(),
                     country: parsedLocation.country.trim(),
                     city: parsedLocation.city.trim(),
-                    degree: profileDraft.degree.trim(),
-                    field: profileDraft.field.trim(),
-                    positionTitle: profileDraft.positionTitle.trim(),
-                    positionField: profileDraft.positionField.trim(),
+                    degree,
+                    field,
+                    positionTitle,
+                    positionField,
                     email: profileDraft.email.trim(),
                     languages: selectedLanguages,
                     links: (profileDraft.links || [])
@@ -867,7 +893,10 @@ const UserPage = ({ user, setUser }) => {
                                 {isOwnProfile ? (
                                     <button
                                         className="profile-bio-edit-btn"
-                                        onClick={() => setIsEditingProfile(true)}
+                                        onClick={() => {
+                                            setProfileError("");
+                                            setIsEditingProfile(true);
+                                        }}
                                         aria-label="Edit profile"
                                         title="Edit profile"
                                     >
@@ -944,6 +973,23 @@ const UserPage = ({ user, setUser }) => {
                         </div>
                     ) : (
                         <div className="profile-bio-editor">
+                            {profileError && (
+                                <div
+                                    style={{
+                                        marginBottom: 12,
+                                        padding: '10px 12px',
+                                        borderRadius: 8,
+                                        background: '#fee2e2',
+                                        border: '1px solid #fecaca',
+                                        color: '#991b1b',
+                                        fontSize: 14,
+                                        fontWeight: 500
+                                    }}
+                                >
+                                    {profileError}
+                                </div>
+                            )}
+
                             <div style={{ position: 'relative' }}>
                                 <input
                                     className="profile-bio-textarea"
@@ -1008,9 +1054,10 @@ const UserPage = ({ user, setUser }) => {
                                     suggestions={positionTitleSuggestions}
                                     inputValue={positionTitleInput}
                                     onInputChange={setPositionTitleInput}
-                                    onAddItem={(value) =>
-                                        setProfileDraft((prev) => ({ ...prev, positionTitle: value }))
-                                    }
+                                    onAddItem={(value) => {
+                                        setProfileError("");
+                                        setProfileDraft((prev) => ({ ...prev, positionTitle: value }));
+                                    }}
                                     onRemoveItem={() =>
                                         setProfileDraft((prev) => ({ ...prev, positionTitle: "" }))
                                     }
@@ -1024,9 +1071,10 @@ const UserPage = ({ user, setUser }) => {
                                     suggestions={positionFieldSuggestions}
                                     inputValue={positionFieldInput}
                                     onInputChange={setPositionFieldInput}
-                                    onAddItem={(value) =>
-                                        setProfileDraft((prev) => ({ ...prev, positionField: value }))
-                                    }
+                                    onAddItem={(value) => {
+                                        setProfileError("");
+                                        setProfileDraft((prev) => ({ ...prev, positionField: value }));
+                                    }}
                                     onRemoveItem={() =>
                                         setProfileDraft((prev) => ({ ...prev, positionField: "" }))
                                     }
@@ -1099,9 +1147,10 @@ const UserPage = ({ user, setUser }) => {
                                     suggestions={titleSuggestions}
                                     inputValue={titleInput}
                                     onInputChange={setTitleInput}
-                                    onAddItem={(value) =>
-                                        setProfileDraft((prev) => ({ ...prev, degree: value }))
-                                    }
+                                    onAddItem={(value) => {
+                                        setProfileError("");
+                                        setProfileDraft((prev) => ({ ...prev, degree: value }));
+                                    }}
                                     onRemoveItem={() =>
                                         setProfileDraft((prev) => ({ ...prev, degree: "" }))
                                     }
@@ -1115,9 +1164,10 @@ const UserPage = ({ user, setUser }) => {
                                     suggestions={fieldSuggestions}
                                     inputValue={fieldInput}
                                     onInputChange={setFieldInput}
-                                    onAddItem={(value) =>
-                                        setProfileDraft((prev) => ({ ...prev, field: value }))
-                                    }
+                                    onAddItem={(value) => {
+                                        setProfileError("");
+                                        setProfileDraft((prev) => ({ ...prev, field: value }));
+                                    }}
                                     onRemoveItem={() =>
                                         setProfileDraft((prev) => ({ ...prev, field: "" }))
                                     }
@@ -1180,6 +1230,24 @@ const UserPage = ({ user, setUser }) => {
                                     Add link
                                 </button>
                             </div>
+
+                            {profileError && (
+                                <div
+                                    style={{
+                                        marginTop: 12,
+                                        marginBottom: 12,
+                                        padding: '10px 12px',
+                                        borderRadius: 8,
+                                        background: '#fee2e2',
+                                        border: '1px solid #fecaca',
+                                        color: '#991b1b',
+                                        fontSize: 14,
+                                        fontWeight: 500
+                                    }}
+                                >
+                                    {profileError}
+                                </div>
+                            )}
 
                             <div className="profile-bio-actions">
                                 <button className="profile-bio-save-btn" onClick={handleSaveProfile}>Save</button>

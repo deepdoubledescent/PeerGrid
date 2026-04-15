@@ -119,7 +119,9 @@ export default function AllPapersPage({ user }) {
 
   const [workTypes, setWorkTypes] = useState([]);
   const [workTypesLoading, setWorkTypesLoading] = useState(false);
-  const [selectedWorkType, setSelectedWorkType] = useState("");
+  const [workTypeQuery, setWorkTypeQuery] = useState("");
+  const [selectedWorkType, setSelectedWorkType] = useState(null);
+  const [showWorkTypeSuggestions, setShowWorkTypeSuggestions] = useState(false);
 
   const [subtopicQuery, setSubtopicQuery] = useState("");
   const [subtopicOptions, setSubtopicOptions] = useState([]);
@@ -162,6 +164,19 @@ export default function AllPapersPage({ user }) {
     () => String(topicQuery || "").trim(),
     [topicQuery]
   );
+
+  const normalizedWorkTypeInput = useMemo(
+    () => String(workTypeQuery || "").trim().toLowerCase(),
+    [workTypeQuery]
+  );
+
+  const filteredWorkTypes = useMemo(() => {
+    if (!normalizedWorkTypeInput) return workTypes;
+
+    return workTypes.filter((wt) =>
+      String(wt.label || "").toLowerCase().includes(normalizedWorkTypeInput)
+    );
+  }, [workTypes, normalizedWorkTypeInput]);
 
   const topicLookupSubtopicId = useMemo(() => {
     return selectedSubtopics.length === 1 ? selectedSubtopics[0].id : null;
@@ -298,7 +313,7 @@ export default function AllPapersPage({ user }) {
     };
   }, [normalizedSubtopicInput, showSubtopicSuggestions, selectedTopic]);
 
-    useEffect(() => {
+  useEffect(() => {
     let cancelled = false;
 
     const enforceSubtopicsForSelectedTopic = async () => {
@@ -389,7 +404,7 @@ export default function AllPapersPage({ user }) {
           q: query.trim(),
           sinceYear: String(sinceYear || "").trim(),
           institutionId: selectedInstitution?.id || null,
-          workType: selectedWorkType || null,
+          workType: selectedWorkType?.id || null,
           topicId: !expandedTopicIds?.length ? selectedTopic?.id || null : null,
           topicIds: expandedTopicIds,
           subtopicIds: selectedSubtopics.map((item) => item.id),
@@ -445,7 +460,9 @@ export default function AllPapersPage({ user }) {
     setHasInstitutionSearchAttempt(false);
     setInstitutionLoading(false);
 
-    setSelectedWorkType("");
+    setWorkTypeQuery("");
+    setSelectedWorkType(null);
+    setShowWorkTypeSuggestions(false);
 
     setSubtopicQuery("");
     setSubtopicOptions([]);
@@ -632,8 +649,11 @@ export default function AllPapersPage({ user }) {
 
       <div
         className={`relative z-30 mx-auto w-full max-w-5xl transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          isAdvancedOpen ? "max-h-[1100px] opacity-100 mt-6" : "max-h-0 opacity-0 mt-0"
+          isAdvancedOpen
+            ? "max-h-[1100px] opacity-100 mt-6 overflow-visible pointer-events-auto"
+            : "max-h-0 opacity-0 mt-0 overflow-hidden pointer-events-none"
         }`}
+        aria-hidden={!isAdvancedOpen}
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-6 px-2">
           <div className="flex flex-col gap-2 relative">
@@ -660,7 +680,7 @@ export default function AllPapersPage({ user }) {
               />
 
               {showTopicSuggestions && !selectedTopic && (
-                <ul className="absolute left-0 top-full w-full z-[60] bg-stone-50 border border-stone-200 mt-1 max-h-48 overflow-y-auto shadow-lg shadow-stone-200/50 rounded-sm custom-scrollbar">
+                <ul className="absolute left-0 top-full w-full z-[60] bg-stone-50 border border-stone-200 mt-1 max-h-64 overflow-y-auto shadow-lg shadow-stone-200/50 rounded-sm custom-scrollbar">
                   {topicLoading ? (
                     <li className="px-3 py-2 text-stone-400 italic text-sm">
                       Searching...
@@ -738,7 +758,7 @@ export default function AllPapersPage({ user }) {
               />
 
               {showSubtopicSuggestions && (
-                <ul className="absolute left-0 top-full w-full z-[60] bg-stone-50 border border-stone-200 mt-1 max-h-48 overflow-y-auto shadow-lg shadow-stone-200/50 rounded-sm custom-scrollbar">
+                <ul className="absolute left-0 top-full w-full z-[60] bg-stone-50 border border-stone-200 mt-1 max-h-64 overflow-y-auto shadow-lg shadow-stone-200/50 rounded-sm custom-scrollbar">
                   {subtopicLoading ? (
                     <li className="px-3 py-2 text-stone-400 italic text-sm">
                       Searching...
@@ -813,7 +833,7 @@ export default function AllPapersPage({ user }) {
               />
 
               {showInstituteSuggestions && !selectedInstitution && (
-                <ul className="absolute left-0 top-full w-full z-[60] bg-stone-50 border border-stone-200 mt-1 max-h-48 overflow-y-auto shadow-lg shadow-stone-200/50 rounded-sm custom-scrollbar">
+                <ul className="absolute left-0 top-full w-full z-[60] bg-stone-50 border border-stone-200 mt-1 max-h-64 overflow-y-auto shadow-lg shadow-stone-200/50 rounded-sm custom-scrollbar">
                   {institutionLoading ? (
                     <li className="px-3 py-2 text-stone-400 italic text-sm">
                       Searching...
@@ -850,33 +870,87 @@ export default function AllPapersPage({ user }) {
               <CalendarIcon size={14} /> Since year
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               placeholder="YYYY"
               value={sinceYear}
-              onChange={(e) => setSinceYear(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (/^\d*$/.test(val)) {
+                  setSinceYear(val);
+                }
+              }}
               onKeyDown={(e) => e.key === "Enter" && onSearch()}
-              className="bg-transparent border-b border-stone-300 py-1 text-lg focus:outline-none focus:border-stone-800 transition-colors"
+              className="w-full bg-transparent border-b border-stone-300 py-1 text-lg focus:outline-none focus:border-stone-800 transition-colors"
             />
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 relative">
             <label className="flex items-center gap-2 text-xs uppercase tracking-widest text-stone-500">
               <BookOpen size={14} /> Work type
             </label>
-            <select
-              value={selectedWorkType}
-              onChange={(e) => setSelectedWorkType(e.target.value)}
-              className="bg-transparent border-b border-stone-300 py-1 text-lg focus:outline-none focus:border-stone-800 transition-colors"
-            >
-              <option value="">
-                {workTypesLoading ? "Loading..." : "Any type"}
-              </option>
-              {workTypes.map((wt) => (
-                <option key={wt.id} value={wt.id}>
-                  {wt.label}
-                </option>
-              ))}
-            </select>
+
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Any type"
+                value={selectedWorkType?.label || workTypeQuery}
+                onChange={(e) => {
+                  setSelectedWorkType(null);
+                  setWorkTypeQuery(e.target.value);
+                  setShowWorkTypeSuggestions(true);
+                }}
+                onFocus={() => setShowWorkTypeSuggestions(true)}
+                onBlur={() => {
+                  setTimeout(() => setShowWorkTypeSuggestions(false), 150);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && onSearch()}
+                className="w-full bg-transparent border-b border-stone-300 py-1 text-lg focus:outline-none focus:border-stone-800 transition-colors"
+              />
+
+              {showWorkTypeSuggestions && !selectedWorkType && (
+                <ul className="absolute left-0 top-full w-full z-[60] bg-stone-50 border border-stone-200 mt-1 max-h-64 overflow-y-auto shadow-lg shadow-stone-200/50 rounded-sm custom-scrollbar">
+                  {workTypesLoading ? (
+                    <li className="px-3 py-2 text-stone-400 italic text-sm">
+                      Loading...
+                    </li>
+                  ) : filteredWorkTypes.length > 0 ? (
+                    <>
+                      <li
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setSelectedWorkType(null);
+                          setWorkTypeQuery("");
+                          setShowWorkTypeSuggestions(false);
+                        }}
+                        className="px-3 py-2 hover:bg-stone-200 cursor-pointer text-stone-700 text-lg transition-colors border-b border-stone-100"
+                      >
+                        Any type
+                      </li>
+
+                      {filteredWorkTypes.map((wt) => (
+                        <li
+                          key={wt.id}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setSelectedWorkType(wt);
+                            setWorkTypeQuery(wt.label);
+                            setShowWorkTypeSuggestions(false);
+                          }}
+                          className="px-3 py-2 hover:bg-stone-200 cursor-pointer text-stone-700 text-lg transition-colors border-b border-stone-100 last:border-0"
+                        >
+                          {wt.label}
+                        </li>
+                      ))}
+                    </>
+                  ) : (
+                    <li className="px-3 py-2 text-stone-400 italic text-sm">
+                      No matches found
+                    </li>
+                  )}
+                </ul>
+              )}
+            </div>
           </div>
         </div>
 

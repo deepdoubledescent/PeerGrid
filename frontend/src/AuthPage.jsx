@@ -282,14 +282,14 @@ export default function AuthPage({ user, setUser }) {
             <img src="/logo.png" alt="Logo" className="auth-logo" />
           </div>
           <h1 className="auth-title">
-            {authMode === "signin" && "Welcome back"}
+            {authMode === "signin" && "PeerGrid"}
             {authMode === "signup" && "Create account"}
             {authMode === "confirm" && "Verify email"}
             {authMode === "forgot" && "Reset password"}
             {authMode === "reset" && "New password"}
           </h1>
           <p className="auth-subtitle">
-            {authMode === "signin" && "Sign in to discover research projects and connect with collaborators"}
+            {authMode === "signin" && "Find Your Elite Research Partners"}
             {authMode === "signup" && "Join our community of researchers and innovators"}
             {authMode === "confirm" && `Enter the verification code sent to ${pendingEmail}`}
             {authMode === "forgot" && "Enter your email to receive a password reset code"}
@@ -678,7 +678,8 @@ const authStyles = `
   }
 
   .auth-subtitle {
-    font-size: 0.9rem;
+    font-size: 1.2rem;   /* was 0.9rem */
+    font-weight: 600;    /* makes it stand out more */
     color: var(--text-secondary, #505e76);
     margin: 0;
     line-height: 1.6;

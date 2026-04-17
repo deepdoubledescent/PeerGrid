@@ -90,12 +90,69 @@ export async function searchInstitutions(query, user) {
   const value = String(query || "").trim();
   if (!value) return [];
 
-  const url = `${BASE}/autocomplete/institutions?q=${encodeURIComponent(value)}${buildMailto(user)}`;
-  const data = await fetchJson(url, "Institution search failed");
+  const variants = new Set([value]);
 
-  return (data.results || [])
-    .map(normalizeInstitutionResult)
-    .filter(Boolean);
+  const lower = value.toLowerCase();
+
+  // German transliteration variants
+  variants.add(
+    value
+      .replace(/ae/g, "ä")
+      .replace(/oe/g, "ö")
+      .replace(/ue/g, "ü")
+      .replace(/ss/g, "ß")
+  );
+
+  variants.add(
+    value
+      .replace(/ä/g, "a")
+      .replace(/ö/g, "o")
+      .replace(/ü/g, "u")
+      .replace(/ß/g, "ss")
+  );
+
+  variants.add(
+    value
+      .replace(/ä/g, "ae")
+      .replace(/ö/g, "oe")
+      .replace(/ü/g, "ue")
+      .replace(/ß/g, "ss")
+  );
+
+  // Special fallback for common plain forms like tubingen -> tübingen
+  if (lower.includes("tubingen")) {
+    variants.add(value.replace(/tubingen/gi, "tübingen"));
+    variants.add(value.replace(/tubingen/gi, "tuebingen"));
+  }
+
+  const allResults = [];
+  const seenUrls = new Set();
+
+  for (const variant of variants) {
+    const url = `${BASE}/institutions?search=${encodeURIComponent(variant)}${buildMailto(user)}`;
+    if (seenUrls.has(url)) continue;
+    seenUrls.add(url);
+
+    try {
+      const data = await fetchJson(url, "Institution search failed");
+      allResults.push(...(data.results || []));
+    } catch {
+      // ignore one failed variant
+    }
+  }
+
+  const deduped = [];
+  const seenIds = new Set();
+
+  for (const inst of allResults) {
+    const normalized = normalizeInstitutionResult(inst);
+    if (!normalized) continue;
+    if (seenIds.has(normalized.id)) continue;
+    seenIds.add(normalized.id);
+    deduped.push(normalized);
+  }
+
+  return deduped;
 }
 
 export async function searchWorks(

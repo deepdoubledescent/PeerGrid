@@ -352,7 +352,7 @@ export default function OpenAlexSetupPage({
     const topicStats = (topicStatsData.group_by || [])
       .filter(g => g.key && g.key !== 'unknown')
       .map(g => ({
-        topic_id: parseInt(g.key.replace('T', ''), 10),
+        topic_id: parseInt(g.key.split('/').pop().replace('T', ''), 10),
         count: g.count,
       }))
       .filter(g => !isNaN(g.topic_id));

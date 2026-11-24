@@ -34,8 +34,8 @@ PeerGrid helps researchers find collaborators, discover relevant projects, and s
           ┌──────────────┼──────────────┐
           ▼              ▼              ▼
    ┌───────────┐  ┌───────────┐  ┌───────────────────┐
-   │  MySQL    │  │  AWS S3   │  │  Matchmaking       │
-   │  (RDS)   │  │  (files)  │  │  Lambda (Python)   │
+   │  MySQL    │  │  AWS S3   │  │  Matchmaking      │
+   │  (RDS)    │  │  (files)  │  │  Lambda (Python)  │
    └───────────┘  └───────────┘  └───────────────────┘
                                    Nightly batch via
                                    EventBridge

@@ -2,7 +2,7 @@
 
 A web platform that connects researchers by matching them based on their publication history, research topics, and expertise — powered by the [OpenAlex](https://openalex.org/) academic graph.
 
-**Live at** [peer-grid.de](https://www.peer-grid.de)
+**Live at** [peer-grid.de](https://www.peer-grid.de): paused since July 2026. PeerGrid is open source, and collaborators are welcome. Feel free to reach out.  
 
 ---
 
